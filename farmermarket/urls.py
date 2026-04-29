@@ -16,7 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from farmersmarket.views import add_client_view,add_farm_view,add_farmer_view,add_order_view,add_payment_view,add_product_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('add_client/',add_client_view,name="Client_page"),
+    path('add_order/',add_order_view,name="Order_page"),
+    path('add_farm/',add_farm_view,name="Farm_page"),
+    path('add_payment/',add_payment_view,name="Payment_page"),
+    path('add_product/',add_product_view,name="Product_page"),
+    path('add_farmer/',add_farmer_view,name="Farmer_page"),
 ]
