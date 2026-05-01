@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width:900px;">
+  <div style="margin-top:2rem; display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <h1 style="color:#510d0a; font-size:1.5rem;">🛒 Your Cart</h1>
+      {% if farmers_data %}
+        <p style="color:#888; font-size:.88rem; margin-top:.25rem;">Items grouped by farmer</p>
+      {% endif %}
+    </div>
+    <a href="{% url 'marketplace' %}" style="color:#888; font-size:.88rem; text-decoration:none;">← Continue Shopping</a>
+  </div>
+
+  {% if farmers_data %}
+    {% for group in farmers_data %}
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:1.25rem;">
+      <div style="padding:.75rem 1.25rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; display:flex; align-items:center; gap:.5rem;">
+        <span style="font-size:1rem;">👨‍🌾</span>
+        <strong style="color:#510d0a; font-size:.95rem;">{{ group.farmer.name }}</strong>
+        <span style="color:#888; font-size:.8rem; margin-left:.25rem;">{{ group.farmer.address }}</span>
+      </div>
+      {% for item in group.items %}
+      <div style="padding:.9rem 1.25rem; display:flex; align-items:center; gap:1rem; border-bottom:1px solid #f7f7f7;">
+        {% if item.product.image %}
+          <img src="{{ item.product.image.url }}" style="width:52px; height:52px; object-fit:cover; border-radius:8px; flex-shrink:0;">
+        {% else %}
+          <div style="width:52px; height:52px; background:#fdf3d0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">🌿</div>
+        {% endif %}
+        <div style="flex:1; min-width:0;">
+          <strong style="color:#191102; font-size:.92rem;">{{ item.product.crop_name }}</strong>
+          <p style="color:#888; font-size:.78rem;">{{ item.product.currency }} {{ item.product.price }} / {{ item.product.get_unit_display }}</p>
+          {% if item.product.quantity_available <= 5 %}
+            <p style="color:#c62828; font-size:.75rem; font-weight:600;">⚠️ Only {{ item.product.quantity_available }} left!</p>
+          {% endif %}
+        </div>
+        <form method="post" action="{% url 'update_cart' item.product.id %}" style="display:flex; align-items:center; gap:.35rem;">
+          {% csrf_token %}
+          <input type="number" name="quantity" value="{{ item.qty }}" min="0" max="{{ item.product.quantity_available }}"
+                 style="width:56px; padding:.4rem; border:1.5px solid #ddd; border-radius:7px; text-align:center; font-size:.9rem; font-family:inherit;">
+          <button type="submit" style="background:none; border:none; cursor:pointer; color:#510d0a; font-size:.78rem; font-weight:700; padding:.3rem;">Update</button>
+        </form>
+        <div style="text-align:right; min-width:80px;">
+          <p style="font-weight:700; color:#191102; font-size:.95rem;">{{ item.product.currency }} {{ item.subtotal }}</p>
+        </div>
+        <form method="post" action="{% url 'remove_from_cart' item.product.id %}">
+          {% csrf_token %}
+          <button type="submit" style="background:none; border:none; cursor:pointer; color:#c62828; font-size:1.1rem;" title="Remove">✕</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <!-- Total & CTA -->
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding:1.25rem 1.5rem;">
+      <div>
+        <p style="color:#888; font-size:.85rem; margin-bottom:.2rem;">Order Total</p>
+        <p style="font-size:1.6rem; font-weight:700; color:#510d0a;">{{ total }}</p>
+      </div>
+      <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+        <a href="{% url 'marketplace' %}" class="btn btn-secondary">Continue Shopping</a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'checkout' %}" class="btn btn-primary" style="padding:.75rem 2rem;">Proceed to Checkout →</a>
+        {% else %}
+          <a href="{% url 'login' %}" class="btn btn-primary">Login to Checkout</a>
+        {% endif %}
+      </div>
+    </div>
+
+  {% else %}
+  <div class="card" style="text-align:center; padding:4rem;">
+    <div style="font-size:4rem;">🛒</div>
+    <h3 style="margin:.75rem 0 .5rem; color:#510d0a;">Your cart is empty</h3>
+    <p style="color:#888; margin-bottom:1.5rem;">Discover fresh produce from local farmers.</p>
+    <a href="{% url 'marketplace' %}" class="btn btn-primary">Browse Marketplace</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

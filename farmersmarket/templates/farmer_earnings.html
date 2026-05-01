@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width:900px; margin-top:2rem; margin-bottom:4rem;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <h1 style="color:#510d0a; font-size:1.5rem;">📊 Earnings — {{ farmer.name }}</h1>
+      <p style="color:#888; font-size:.88rem; margin-top:.25rem;">Revenue from delivered orders only.</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Dashboard</a>
+  </div>
+
+  <!-- Revenue cards -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:2rem;">
+    {% for label,val in revenue_rows %}
+    <div class="card" style="text-align:center; padding:1.25rem; background:{% if forloop.first %}linear-gradient(135deg,#510d0a,#7a1510){% elif forloop.counter == 2 %}linear-gradient(135deg,#a29f15,#c8c413){% else %}#fff{% endif %}; color:{% if forloop.counter <= 2 %}#fff{% else %}#191102{% endif %};">
+      <div style="font-size:1.5rem; font-weight:800; color:{% if forloop.first %}#f3b61f{% elif forloop.counter == 2 %}#191102{% else %}#510d0a{% endif %}; margin-bottom:.25rem;">{{ currency }} {{ val|floatformat:0 }}</div>
+      <div style="font-size:.8rem; opacity:.8;">{{ label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Best selling products -->
+  {% if best_products %}
+  <div class="card" style="padding:0; overflow:hidden; margin-bottom:2rem;">
+    <div style="padding:.85rem 1.25rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; font-weight:700; color:#510d0a; font-size:.92rem;">🏆 Best Selling Products</div>
+    <table style="width:100%; border-collapse:collapse; font-size:.88rem;">
+      <thead>
+        <tr style="background:#bbd8b3;">
+          <th style="padding:.75rem 1.25rem; text-align:left;">Product</th>
+          <th style="padding:.75rem 1rem; text-align:right;">Qty Sold</th>
+          <th style="padding:.75rem 1rem; text-align:right;">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in best_products %}
+        <tr style="border-bottom:1px solid #f7f7f7;">
+          <td style="padding:.75rem 1.25rem; font-weight:600; color:#191102;">{{ p.product__crop_name }}</td>
+          <td style="padding:.75rem 1rem; text-align:right; color:#888;">{{ p.total_qty }}</td>
+          <td style="padding:.75rem 1rem; text-align:right; font-weight:700; color:#510d0a;">{{ p.product__currency }} {{ p.total_rev|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Recent orders -->
+  <div class="card" style="padding:0; overflow:hidden;">
+    <div style="padding:.85rem 1.25rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-weight:700; color:#510d0a; font-size:.92rem;">Recent Sales (Delivered)</span>
+      <a href="{% url 'farmer_sales_list' %}" style="color:#510d0a; font-size:.8rem; font-weight:700; text-decoration:none;">View All Sales History →</a>
+    </div>
+    <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
+      <thead>
+        <tr style="background:#bbd8b3;">
+          <th style="padding:.7rem 1.25rem; text-align:left;">Order</th>
+          <th style="padding:.7rem 1rem; text-align:left;">Client</th>
+          <th style="padding:.7rem 1rem; text-align:left;">Date</th>
+          <th style="padding:.7rem 1rem; text-align:left;">Status</th>
+          <th style="padding:.7rem 1rem; text-align:right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in recent_orders %}
+        <tr style="border-bottom:1px solid #f7f7f7;">
+          <td style="padding:.7rem 1.25rem;"><a href="{% url 'order_detail' o.id %}" style="color:#510d0a; font-weight:700; text-decoration:none;">#{{ o.id }}</a></td>
+          <td style="padding:.7rem 1rem;">{{ o.client.name }}</td>
+          <td style="padding:.7rem 1rem; color:#888;">{{ o.order_date|date:"M j, Y" }}</td>
+          <td style="padding:.7rem 1rem;">
+            <span style="padding:.15rem .6rem; border-radius:9px; font-size:.76rem; font-weight:700;
+              background:{% if o.status == 'Delivered' %}#c8e6c9{% elif o.status == 'Cancelled' %}#ffcdd2{% else %}#fdf3d0{% endif %};
+              color:{% if o.status == 'Delivered' %}#2e7d32{% elif o.status == 'Cancelled' %}#c62828{% else %}#a29f15{% endif %};">
+              {{ o.status }}
+            </span>
+          </td>
+          <td style="padding:.7rem 1rem; text-align:right; font-weight:600; color:#191102;">{{ currency }} {{ o.total_amount|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -27,14 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Market Hub Theme — Custom Palette
+# Market Hub Theme Configuration
 THEME_CONFIG = {
-    'PRIMARY_COLOR':   '#510d0a',   # Black Cherry
-    'SECONDARY_COLOR': '#bbd8b3',   # Celadon
-    'ACCENT_COLOR':    '#f3b61f',   # Sunflower Gold
-    'GOLD_COLOR':      '#a29f15',   # Old Gold
-    'DARK_COLOR':      '#191102',   # Pitch Black
-    'NAVBAR_STYLE':    'Dark',
+    'PRIMARY_COLOR': '#2E7D32',
+    'SECONDARY_COLOR': '#A5D6A7',
+    'ACCENT_COLOR': '#FFC107',
+    'NAVBAR_STYLE': 'Light'
 }
 
 # Media files configuration
@@ -70,14 +68,13 @@ ROOT_URLCONF = 'farmermarket.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'farmersmarket', 'templates')],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'farmersmarket.context_processors.theme_config',
             ],
         },
     },

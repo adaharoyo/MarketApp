@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width:780px; margin-top:2rem; margin-bottom:4rem;">
+  <h1 style="color:#510d0a; margin-bottom:.4rem;">✅ Checkout</h1>
+  <p style="color:#888; margin-bottom:2rem; font-size:.9rem;">Review your order and choose how to receive it.</p>
+
+  <!-- Step indicator -->
+  <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:2rem; font-size:.82rem; font-weight:600;">
+    <span id="step-ind-1" style="background:#510d0a; color:#fff; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center;">1</span>
+    <span style="color:#510d0a;">Delivery</span>
+    <span style="flex:1; height:2px; background:#ddd; margin:0 .5rem;"></span>
+    <span id="step-ind-2" style="background:#ddd; color:#888; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center;">2</span>
+    <span style="color:#888;">Review & Pay</span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+    <!-- LEFT: Order summary -->
+    <div>
+      {% for group in farmers_data %}
+      <div class="card" style="padding:0; overflow:hidden; margin-bottom:1rem;">
+        <div style="padding:.6rem 1rem; background:#fdf3d0; font-weight:600; font-size:.85rem; color:#510d0a; border-bottom:1px solid #f0e8c4;">
+          👨‍🌾 {{ group.farmer.name }}
+        </div>
+        {% for item in group.items %}
+        <div style="padding:.7rem 1rem; display:flex; justify-content:space-between; border-bottom:1px solid #f7f7f7; font-size:.88rem;">
+          <span style="color:#444;">{{ item.product.crop_name }} <span style="color:#aaa;">× {{ item.qty }}</span></span>
+          <span style="font-weight:600;">{{ item.product.currency }} {{ item.subtotal }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <!-- DPoD explanation box -->
+      <div style="background:#fdf3d0; border:1.5px solid #f3b61f; border-radius:12px; padding:1rem 1.25rem;">
+        <p style="font-weight:700; color:#510d0a; margin-bottom:.4rem;">💡 Pay on Delivery (Cashless)</p>
+        <p style="color:#555; font-size:.85rem; line-height:1.5;">
+          You will only pay <strong>when your order arrives</strong>. Payment is requested via Mobile Money or card at the door. No upfront charge.
+        </p>
+      </div>
+
+      <div style="margin-top:1rem; background:#fff; border-radius:12px; padding:1rem 1.25rem; box-shadow:0 2px 8px rgba(0,0,0,.06); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700; font-size:1rem; color:#888;">Total</span>
+        <span style="font-weight:800; font-size:1.35rem; color:#510d0a;">{{ total }}</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: Delivery form -->
+    <div class="card" style="padding:1.5rem; height:fit-content;">
+      <h3 style="color:#510d0a; margin-bottom:1.25rem; font-size:1rem;">Delivery Details</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom:1rem;">
+          <label style="display:block; font-weight:600; margin-bottom:.4rem; font-size:.88rem;">Delivery Type</label>
+          <select name="delivery_type" id="delivery-type"
+                  style="width:100%; padding:.75rem; border:1.5px solid #ddd; border-radius:9px; font-size:.95rem; font-family:inherit;"
+                  onchange="toggleAddr(this.value)">
+            <option value="Pickup">🏪 Pickup</option>
+            <option value="Delivery">🚚 Home Delivery</option>
+          </select>
+        </div>
+        <div id="address-field" style="margin-bottom:1rem; display:none;">
+          <label style="display:block; font-weight:600; margin-bottom:.4rem; font-size:.88rem;">Delivery Address</label>
+          <input type="text" name="delivery_address" value="{{ client.address }}"
+                 style="width:100%; padding:.75rem; border:1.5px solid #ddd; border-radius:9px; font-size:.95rem; font-family:inherit;" placeholder="Street, City">
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <label style="display:block; font-weight:600; margin-bottom:.4rem; font-size:.88rem;">Notes (optional)</label>
+          <textarea name="notes" rows="3"
+                    style="width:100%; padding:.75rem; border:1.5px solid #ddd; border-radius:9px; font-size:.95rem; font-family:inherit; resize:vertical;"
+                    placeholder="Any special instructions…"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; font-size:1rem; padding:.9rem;">
+          Place Order — {{ total }}
+        </button>
+        <p style="text-align:center; font-size:.78rem; color:#aaa; margin-top:.75rem;">
+          You'll pay on delivery. No card needed now.
+        </p>
+      </form>
+    </div>
+  </div>
+  <div style="margin-top:1rem;"><a href="{% url 'cart' %}" style="color:#888; font-size:.88rem; text-decoration:none;">← Back to Cart</a></div>
+</div>
+<script>
+function toggleAddr(v) {
+  document.getElementById('address-field').style.display = v==='Delivery'?'block':'none';
+  document.getElementById('step-ind-2').style.background = v==='Delivery'?'#510d0a':'#ddd';
+  document.getElementById('step-ind-2').style.color = v==='Delivery'?'#fff':'#888';
+}
+</script>
+{% endblock %}

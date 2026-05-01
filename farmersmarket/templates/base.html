@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Market Hub – Farm to Table</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:   {{ THEME_CONFIG.PRIMARY_COLOR }};   /* Black Cherry #510d0a */
+      --secondary: {{ THEME_CONFIG.SECONDARY_COLOR }}; /* Celadon     #bbd8b3 */
+      --accent:    {{ THEME_CONFIG.ACCENT_COLOR }};    /* Sunflower Gold #f3b61f */
+      --gold:      {{ THEME_CONFIG.GOLD_COLOR }};      /* Old Gold    #a29f15 */
+      --dark:      {{ THEME_CONFIG.DARK_COLOR }};      /* Pitch Black #191102 */
+      --bg:        #faf9f6;
+      --radius:    12px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:#1a1a1a; padding-bottom:70px; }
+    a { color:inherit; }
+
+    /* ── NAV ── */
+    nav {
+      background:var(--primary);
+      padding:.85rem 1.5rem;
+      display:flex; justify-content:space-between; align-items:center;
+      position:sticky; top:0; z-index:200;
+      box-shadow:0 2px 12px rgba(0,0,0,.18);
+    }
+    .logo { color:#fff; font-size:1.3rem; font-weight:700; text-decoration:none; }
+    .nav-links { list-style:none; display:flex; gap:1rem; align-items:center; }
+    .nav-links a {
+      color:rgba(255,255,255,.9); text-decoration:none; font-weight:500;
+      font-size:.9rem; padding:.4rem .7rem; border-radius:7px;
+      transition:background .2s;
+    }
+    .nav-links a:hover { background:rgba(255,255,255,.15); }
+    .badge-pill {
+      background:var(--accent); color:#1a1a1a;
+      padding:.35rem .85rem; border-radius:20px; font-weight:700; font-size:.85rem;
+    }
+
+    /* ── NOTIFICATION BELL ── */
+    .bell-wrap { position:relative; }
+    .bell-btn {
+      background:none; border:none; cursor:pointer;
+      color:#fff; font-size:1.2rem; padding:.3rem .5rem;
+      position:relative;
+    }
+    .bell-count {
+      position:absolute; top:-4px; right:-4px;
+      background:#e53935; color:#fff;
+      font-size:.65rem; font-weight:700;
+      border-radius:50%; width:16px; height:16px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .notif-dropdown {
+      display:none; position:absolute; right:0; top:calc(100% + 8px);
+      background:#fff; border-radius:var(--radius); min-width:300px;
+      box-shadow:0 8px 30px rgba(0,0,0,.15); z-index:300;
+      overflow:hidden;
+    }
+    .notif-dropdown.open { display:block; }
+    .notif-header {
+      padding:.75rem 1rem; font-weight:700; font-size:.85rem;
+      border-bottom:1px solid #f0f0f0; color:var(--primary);
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .notif-item {
+      padding:.65rem 1rem; font-size:.82rem; border-bottom:1px solid #f7f7f7;
+      color:#444; line-height:1.4;
+    }
+    .notif-item:last-child { border-bottom:none; }
+    .notif-empty { padding:1.5rem; text-align:center; color:#aaa; font-size:.85rem; }
+
+    /* ── LAYOUT ── */
+    .container { max-width:1200px; margin:0 auto; padding:0 1.25rem; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display:inline-block; padding:.65rem 1.35rem; border-radius:9px;
+      font-weight:600; cursor:pointer; transition:transform .2s,box-shadow .2s;
+      font-size:.92rem; border:none; font-family:inherit; text-decoration:none;
+    }
+    .btn:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,.12); }
+    .btn-primary   { background:var(--primary);   color:#fff; }
+    .btn-secondary { background:var(--secondary); color:#1a1a1a; }
+    .btn-accent    { background:var(--accent);    color:#1a1a1a; }
+    .btn-danger    { background:#e53935;           color:#fff; }
+    .btn-sm        { padding:.35rem .8rem; font-size:.8rem; }
+
+    /* ── CARD ── */
+    .card {
+      background:#fff; border-radius:var(--radius);
+      padding:1.4rem; box-shadow:0 2px 10px rgba(0,0,0,.07);
+      margin-bottom:1rem;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background:linear-gradient(135deg,var(--primary) 0%,#43a047 60%,var(--secondary) 100%);
+      color:#fff; padding:5rem 2rem; text-align:center;
+    }
+    .hero h1 { font-size:2.8rem; font-weight:700; margin-bottom:.75rem; }
+    .hero p  { font-size:1.15rem; opacity:.9; margin-bottom:2rem; }
+
+    /* ── TOASTS ── */
+    #toast-container {
+      position:fixed; top:72px; right:1rem; z-index:9999;
+      display:flex; flex-direction:column; gap:.5rem;
+    }
+    .toast {
+      padding:.85rem 1.25rem; border-radius:10px;
+      font-size:.9rem; font-weight:500;
+      box-shadow:0 4px 18px rgba(0,0,0,.15);
+      min-width:240px; max-width:340px;
+      display:flex; align-items:center; gap:.6rem;
+      animation:slideIn .3s ease; color:#fff;
+    }
+    .toast.success { background:#2E7D32; }
+    .toast.error   { background:#c62828; }
+    .toast.info    { background:#1565c0; }
+    @keyframes slideIn {
+      from { transform:translateX(110%); opacity:0; }
+      to   { transform:translateX(0);   opacity:1; }
+    }
+    @keyframes fadeOut {
+      to { opacity:0; transform:translateX(110%); }
+    }
+
+    /* ── MOBILE BOTTOM NAV ── */
+    .bottom-nav {
+      display:none; position:fixed; bottom:0; left:0; right:0;
+      background:#fff; border-top:1px solid #e8e8e8;
+      box-shadow:0 -2px 12px rgba(0,0,0,.1);
+      z-index:150;
+    }
+    .bottom-nav ul {
+      list-style:none; display:flex; justify-content:space-around; padding:.6rem 0;
+    }
+    .bottom-nav a {
+      display:flex; flex-direction:column; align-items:center;
+      font-size:.65rem; color:#888; text-decoration:none;
+      font-weight:500; gap:2px;
+    }
+    .bottom-nav a .icon { font-size:1.3rem; }
+    .bottom-nav a.active, .bottom-nav a:hover { color:var(--primary); }
+
+    @media (max-width: 640px) {
+      .bottom-nav { display:block; }
+      .nav-links   { display:none; }
+      body { padding-bottom:80px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav>
+    <a href="{% url 'home' %}" class="logo">🌱 Market Hub</a>
+    <ul class="nav-links">
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li><a href="{% url 'marketplace' %}">Marketplace</a></li>
+      {% if user.is_authenticated %}
+        <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <!-- Cart -->
+        <li>
+          <a href="{% url 'cart' %}" class="{% if cart_count %}badge-pill{% endif %}">
+            🛒{% if cart_count %} {{ cart_count }}{% else %} Cart{% endif %}
+          </a>
+        </li>
+        <!-- Bell -->
+        <li class="bell-wrap">
+          <button class="bell-btn" onclick="toggleBell(event)" title="Notifications">
+            🔔
+            {% if unread_notif_count %}
+              <span class="bell-count">{{ unread_notif_count }}</span>
+            {% endif %}
+          </button>
+          <div class="notif-dropdown" id="notif-dropdown">
+            <div class="notif-header">
+              <span>Notifications</span>
+              <form method="post" action="{% url 'mark_notifications_read' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" style="background:none;border:none;cursor:pointer;color:#888;font-size:.78rem;font-weight:600;">Mark all read</button>
+              </form>
+            </div>
+            {% if latest_notifs %}
+              {% for n in latest_notifs %}
+                <div class="notif-item">
+                  {% if n.notification_type == 'Order' %}🛒{% elif n.notification_type == 'Status' %}🚚{% else %}💬{% endif %}
+                  {{ n.message }}
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="notif-empty">No notifications yet</div>
+            {% endif %}
+          </div>
+        </li>
+        <li><a href="{% url 'logout' %}">Logout</a></li>
+      {% else %}
+        <li><a href="{% url 'cart' %}">🛒 Cart</a></li>
+        <li><a href="{% url 'login' %}">Login</a></li>
+        <li><a href="{% url 'register' %}" class="badge-pill">Register</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container"></div>
+
+  <!-- DJANGO MESSAGES → TOASTS -->
+  {% if messages %}
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        {% for message in messages %}
+          showToast("{{ message|escapejs }}", "{{ message.tags|default:'info' }}");
+        {% endfor %}
+      });
+    </script>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <ul>
+      <li><a href="{% url 'home' %}"><span class="icon">🏠</span>Home</a></li>
+      <li><a href="{% url 'marketplace' %}"><span class="icon">🛍</span>Shop</a></li>
+      <li><a href="{% url 'cart' %}">
+        <span class="icon">🛒{% if cart_count %}<sup>{{ cart_count }}</sup>{% endif %}</span>Cart
+      </a></li>
+      {% if user.is_authenticated %}
+        <li><a href="{% url 'dashboard' %}"><span class="icon">📊</span>Dashboard</a></li>
+      {% else %}
+        <li><a href="{% url 'login' %}"><span class="icon">👤</span>Login</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <script>
+    // ── TOAST SYSTEM ──────────────────────────────────────────────
+    function showToast(msg, type) {
+      type = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+      const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => {
+        el.style.animation = 'fadeOut .4s forwards';
+        setTimeout(() => el.remove(), 400);
+      }, 3500);
+    }
+
+    // ── BELL DROPDOWN ─────────────────────────────────────────────
+    function toggleBell(e) {
+      e.stopPropagation();
+      document.getElementById('notif-dropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', function() {
+      document.getElementById('notif-dropdown')?.classList.remove('open');
+    });
+  </script>
+</body>
+</html>

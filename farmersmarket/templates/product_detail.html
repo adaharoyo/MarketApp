@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width:780px; margin-top:2rem; margin-bottom:4rem;">
+  <div style="display:flex; gap:1.5rem; flex-wrap:wrap; align-items:start;">
+
+    <!-- Left: product info -->
+    <div style="flex:1.2; min-width:260px;">
+      {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.crop_name }}"
+             style="width:100%; border-radius:16px; max-height:360px; object-fit:cover; margin-bottom:1.25rem; box-shadow:0 4px 18px rgba(81,13,10,.12);">
+      {% else %}
+        <div style="width:100%; height:260px; background:linear-gradient(135deg,#f8ede3,#fdf3d0); border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:5rem; margin-bottom:1.25rem;">🌿</div>
+      {% endif %}
+
+      <!-- Freshness -->
+      {% with fresh=product.freshness_label %}
+        {% if fresh %}
+          <span style="background:{% if fresh.0 == 'green' %}#2e7d32{% elif fresh.0 == 'yellow' %}#a29f15{% else %}#c62828{% endif %}; color:#fff; padding:.3rem .8rem; border-radius:20px; font-size:.78rem; font-weight:700; display:inline-block; margin-bottom:.75rem;">{{ fresh.1 }}</span>
+        {% endif %}
+      {% endwith %}
+
+      <h1 style="color:#510d0a; margin-bottom:.3rem;">{{ product.crop_name }}</h1>
+      <p style="color:#888; font-size:.9rem; margin-bottom:.75rem;">by <strong>{{ product.farmer.name }}</strong> · {{ product.farmer.address }}</p>
+
+      <div style="display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; margin-bottom:.75rem;">
+        <span style="font-size:1.6rem; font-weight:800; color:#191102;">{{ product.currency }} {{ product.price }}</span>
+        <span style="color:#888; font-size:.88rem;">/ {{ product.get_unit_display }}</span>
+        {% if product.category %}
+          <span style="background:#fdf3d0; color:#a29f15; padding:.2rem .7rem; border-radius:10px; font-size:.78rem; font-weight:700;">{{ product.get_category_display }}</span>
+        {% endif %}
+      </div>
+
+      {% if product.avg_rating %}
+        <p style="color:#a29f15; margin-bottom:.75rem;">
+          {% for i in "12345" %}{% if forloop.counter <= product.avg_rating %}★{% else %}☆{% endif %}{% endfor %}
+          <span style="color:#888; font-size:.85rem; margin-left:.25rem;">{{ product.avg_rating }} ({{ product.rating_count }} review{{ product.rating_count|pluralize }})</span>
+        </p>
+      {% endif %}
+
+      <p style="color:#555; line-height:1.6; margin-bottom:1rem;">{{ product.description|default:"No description provided." }}</p>
+      <p style="color:{% if product.quantity_available <= 5 %}#c62828{% else %}#2e7d32{% endif %}; font-size:.88rem; font-weight:600; margin-bottom:1.25rem;">
+        {% if product.quantity_available <= 5 %}⚠️ Only {{ product.quantity_available }} {{ product.unit }} left{% else %}✅ {{ product.quantity_available }} {{ product.unit }} available{% endif %}
+      </p>
+
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'add_to_cart' product.id %}" style="display:flex; gap:.5rem;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input type="number" name="quantity" value="1" min="1" max="{{ product.quantity_available }}"
+                 style="width:70px; padding:.65rem; border:1.5px solid #ddd; border-radius:9px; text-align:center; font-size:.95rem; font-family:inherit;">
+          <button type="submit" class="btn btn-primary" style="flex:1; font-size:.95rem;">🛒 Add to Cart</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}" class="btn btn-primary" style="display:block; text-align:center;">Login to Buy</a>
+      {% endif %}
+    </div>
+
+    <!-- Right: reviews -->
+    <div style="flex:1; min-width:240px;">
+      <div class="card">
+        <h3 style="color:#510d0a; margin-bottom:1rem;">Reviews</h3>
+
+        {% if ratings %}
+          {% for r in ratings %}
+          <div style="padding:.75rem 0; border-bottom:1px solid #f0f0f0;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:.3rem;">
+              <strong style="font-size:.88rem; color:#191102;">{{ r.client.name }}</strong>
+              <span style="color:#a29f15; font-size:.88rem;">{% for i in "12345" %}{% if forloop.counter <= r.stars %}★{% else %}☆{% endif %}{% endfor %}</span>
+            </div>
+            {% if r.review %}<p style="color:#555; font-size:.82rem; line-height:1.5;">{{ r.review }}</p>{% endif %}
+            <p style="color:#bbb; font-size:.72rem; margin-top:.25rem;">{{ r.created_at|date:"M j, Y" }}</p>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color:#aaa; font-size:.85rem; text-align:center; padding:1rem 0;">No reviews yet. Be the first!</p>
+        {% endif %}
+      </div>
+
+      <!-- Rate form (clients who are logged in) -->
+      {% if user.is_authenticated %}
+      <div class="card" style="margin-top:1rem;">
+        <h4 style="color:#510d0a; margin-bottom:.75rem; font-size:.95rem;">{% if user_rating %}Update Your Review{% else %}Leave a Review{% endif %}</h4>
+        <form method="post" action="{% url 'rate_product' product.id %}">
+          {% csrf_token %}
+          <div style="margin-bottom:.75rem;">
+            <label style="display:block; font-weight:600; font-size:.82rem; margin-bottom:.35rem;">Stars</label>
+            <div style="display:flex; gap:.4rem;">
+              {% for i in "12345" %}
+              <label style="cursor:pointer;">
+                <input type="radio" name="stars" value="{{ forloop.counter }}" {% if user_rating and user_rating.stars == forloop.counter %}checked{% endif %} style="display:none;">
+                <span class="star-btn" style="font-size:1.5rem; color:#ddd; transition:color .15s;" onclick="highlightStars({{ forloop.counter }})">★</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <textarea name="review" rows="3" placeholder="Share your experience…"
+                    style="width:100%; padding:.65rem; border:1.5px solid #ddd; border-radius:9px; font-size:.88rem; font-family:inherit; resize:vertical; margin-bottom:.75rem;">{% if user_rating %}{{ user_rating.review }}{% endif %}</textarea>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Submit Review</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<script>
+function highlightStars(n) {
+  const stars = document.querySelectorAll('.star-btn');
+  stars.forEach((s, i) => { s.style.color = i < n ? '#f3b61f' : '#ddd'; });
+  document.querySelectorAll('input[name="stars"]')[n-1].checked = true;
+}
+// Init with current selection
+document.addEventListener('DOMContentLoaded', () => {
+  const checked = document.querySelector('input[name="stars"]:checked');
+  if (checked) highlightStars(parseInt(checked.value));
+});
+</script>
+{% endblock %}

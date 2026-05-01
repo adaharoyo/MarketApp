@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container" style="max-width: 500px;">
+        <div class="card" style="margin-top: 3rem;">
+            <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--primary-color);">Register on Market Hub</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">I am a</label>
+                    <select name="user_type" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <option value="client">Client (Buyer)</option>
+                        <option value="farmer">Farmer (Seller)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Username</label>
+                    <input type="text" name="username" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
+                    <input type="email" name="email" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name</label>
+                    <input type="text" name="name" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contact Number</label>
+                    <input type="text" name="contact" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Address</label>
+                    <input type="text" name="address" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;" id="gender-field">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Gender (for Clients)</label>
+                    <select name="gender" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Password</label>
+                    <input type="password" name="password" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
+            </form>
+            <p style="text-align: center; margin-top: 1rem;">
+                Already have an account? <a href="{% url 'login' %}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Login here</a>
+            </p>
+        </div>
+    </div>
+{% endblock %}

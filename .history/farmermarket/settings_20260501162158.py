@@ -27,14 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Market Hub Theme — Custom Palette
+# Market Hub Theme Configuration
 THEME_CONFIG = {
-    'PRIMARY_COLOR':   '#510d0a',   # Black Cherry
-    'SECONDARY_COLOR': '#bbd8b3',   # Celadon
-    'ACCENT_COLOR':    '#f3b61f',   # Sunflower Gold
-    'GOLD_COLOR':      '#a29f15',   # Old Gold
-    'DARK_COLOR':      '#191102',   # Pitch Black
-    'NAVBAR_STYLE':    'Dark',
+    'PRIMARY_COLOR': '#2E7D32',
+    'SECONDARY_COLOR': '#A5D6A7',
+    'ACCENT_COLOR': '#FFC107',
+    'NAVBAR_STYLE': 'Light'
 }
 
 # Media files configuration

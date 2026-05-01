@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width:1100px; margin-top:2rem; margin-bottom:4rem;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <h1 style="color:#510d0a; font-size:1.5rem;">💰 Complete Sales History</h1>
+      <p style="color:#888; font-size:.88rem; margin-top:.25rem;">A full record of all successfully delivered orders (Real Sales).</p>
+    </div>
+    <div style="display:flex; gap:.75rem;">
+      <a href="{% url 'farmer_earnings' %}" class="btn btn-secondary">← Back to Earnings</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  {% if sales %}
+  <div class="card" style="padding:0; overflow:hidden; border:1px solid #ede8e0;">
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:.9rem;">
+        <thead>
+          <tr style="background:#bbd8b3; color:#191102;">
+            <th style="padding:1rem 1.25rem; text-align:left;">Order ID</th>
+            <th style="padding:1rem; text-align:left;">Client</th>
+            <th style="padding:1rem; text-align:left;">Date Delivered</th>
+            <th style="padding:1rem; text-align:right;">Sale Amount</th>
+            <th style="padding:1rem; text-align:center;">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in sales %}
+          <tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:1rem 1.25rem;"><a href="{% url 'order_detail' o.id %}" style="color:#510d0a; font-weight:700; text-decoration:none;">#{{ o.id }}</a></td>
+            <td style="padding:1rem;">{{ o.client.name }}</td>
+            <td style="padding:1rem; color:#888;">{{ o.order_date|date:"M j, Y" }}</td>
+            <td style="padding:1rem; text-align:right; font-weight:700; color:#2e7d32;">{{ currency }} {{ o.total_amount|floatformat:0 }}</td>
+            <td style="padding:1rem; text-align:center;">
+              <a href="{% url 'order_detail' o.id %}" class="btn btn-secondary btn-sm" style="font-size:.78rem;">View Items</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div style="padding:1.5rem; border-top:1px solid #f0f0f0; display:flex; justify-content:center; gap:.75rem; align-items:center; background:#faf9f6;">
+      {% if sales.has_previous %}
+        <a href="?page={{ sales.previous_page_number }}" class="btn btn-secondary" style="background:#eee; color:#555; border:none; padding:.5rem 1rem;">« Previous</a>
+      {% endif %}
+      <span style="font-size:.9rem; color:#888; font-weight:600;">Page {{ sales.number }} of {{ sales.paginator.num_pages }}</span>
+      {% if sales.has_next %}
+        <a href="?page={{ sales.next_page_number }}" class="btn btn-secondary" style="background:#eee; color:#555; border:none; padding:.5rem 1rem;">Next »</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+    <div style="padding:4rem; text-align:center; background:#fff; border-radius:16px; border:1.5px dashed #ddd;">
+      <div style="font-size:3rem; margin-bottom:1rem;">📉</div>
+      <h3 style="color:#510d0a;">No sales recorded yet</h3>
+      <p style="color:#888;">Once you deliver your first order, it will appear here in your sales history.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

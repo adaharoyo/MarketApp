@@ -1,0 +1,69 @@
+# Market Hub — User Guide & Setup
+
+Market Hub is a farm-to-table marketplace designed to connect local farmers directly with buyers.
+
+## 🚀 How to Run the App
+
+1. **Environment Setup**:
+   - Ensure you have Python 3.11+ installed.
+   - Activate the virtual environment: `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (Linux/Mac).
+   - Install dependencies: `pip install -r requirements.txt`.
+
+2. **Database Migration**:
+   - Run migrations to set up the database: `python manage.py migrate`.
+
+3. **Running the Server**:
+   - Start the development server: `python manage.py runserver`.
+   - Access the app at: `http://127.0.0.1:8000/`.
+
+---
+
+## 👨‍🌾 Farmer Functionality (Seller)
+
+### 1. Dashboard
+- View quick stats: Total revenue, today's earnings, and low stock alerts.
+- **Latest Products**: See your most recently added crops.
+- **Incoming Orders**: See the latest 4 orders waiting for your action.
+- **View All**: Click "View All Products" or "View All Orders" to see your full history with pagination.
+
+### 2. Product Management
+- **Add Product**: List new crops with price, unit, category, and stock levels.
+- **Edit Product**: Update prices or restock existing items from your dedicated products page.
+- **Stock Tracking**: The system warns you when stock is low (<= 5 units).
+
+### 3. Order Fulfillment Flow
+To keep buyers updated, follow this flow:
+- **Accept Order**: Confirms you've seen the order.
+- **Start Packing**: Moves the order to the preparation phase.
+- **Ready for Delivery**: Notifies the buyer that items are ready for pickup or dispatch.
+- **Confirm Delivery**: Finalizes the order and records revenue.
+- **Reject**: Cancels the order and restores stock.
+
+### 4. Earnings
+- View detailed revenue breakdowns (Today, This Week, This Month, All Time).
+- See your **Best Selling Products** by quantity and revenue.
+
+---
+
+## 🛒 Client Functionality (Buyer)
+
+### 1. Marketplace
+- Browse fresh produce from various farmers.
+- Search by name, filter by category, farmer, or price range.
+- Add items to your cart directly from the grid.
+
+### 2. Dashboard
+- View **Order History (Latest)**: Track the status of your 4 most recent purchases.
+- **Fresh Produce (Latest)**: Quick access to the 4 newest items in the market.
+
+### 3. Order Management
+- **Cancel Order**: You can cancel "Pending" orders if you change your mind. Stock is automatically returned to the farmer.
+- **Notifications**: Get real-time updates when a farmer changes your order status (e.g., "Ready for Delivery").
+
+---
+
+## 💡 Key Features
+- **Itemized History**: Buyers can see exactly which items were in each past order.
+- **Pagination**: The app handles large amounts of products and orders gracefully using pages.
+- **Currency Formatting**: Clean, decimal-free UGX (or local currency) display.
+- **Responsive Design**: Works beautifully on mobile and desktop.

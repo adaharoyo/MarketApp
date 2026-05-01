@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container" style="max-width: 600px;">
+        <div class="card" style="margin-top: 3rem;">
+            <h2 style="text-align: center; margin-bottom: 1.5rem; color: var(--primary-color);">{{ title }}</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Save</button>
+            </form>
+        </div>
+    </div>
+    
+    <style>
+        form p {
+            margin-bottom: 1rem;
+        }
+        form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+    </style>
+{% endblock %}

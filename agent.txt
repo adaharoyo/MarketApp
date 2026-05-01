@@ -1,0 +1,185 @@
+================================================================================
+                         MARKET HUB — HANDOVER DOCUMENT
+================================================================================
+
+PROJECT:   Market Hub (Farm-to-Table Marketplace)
+FRAMEWORK: Django 5.x
+STATUS:    Phase 3 Complete
+UPDATED:   2026-05-01
+
+================================================================================
+  COLOUR PALETTE
+================================================================================
+
+  Celadon      #bbd8b3  → --secondary  (backgrounds, table headers)
+  Sunflower Gold #f3b61f → --accent    (CTAs, highlights)
+  Old Gold     #a29f15  → --gold       (stars, category badges, status)
+  Black Cherry #510d0a  → --primary    (navbar, headings, buttons)
+  Pitch Black  #191102  → --dark       (body text, prices)
+
+  Background: #faf9f6 (warm off-white)
+
+================================================================================
+  MODELS  (farmersmarket/models.py)
+================================================================================
+
+  Farmer        OneToOne → User; name, contact, address
+  Farm          FK → Farmer; name, location
+  Client        OneToOne → User; name, contact, address, gender, account_status
+
+  Product
+    crop_name, category (choices), unit (choices, default kg)
+    quantity_available, price, currency (default UGX)
+    harvest_date (DateField, optional — drives freshness badge)
+    farmer FK, description, image, is_available
+    created_at, updated_at
+    @property freshness_label → ('green'|'yellow'|'red', label_text)
+    @property avg_rating      → float or None
+    @property rating_count    → int
+
+  ProductRating   FK → Product + Client; stars(1–5), review, created_at
+                  unique_together = (product, client)
+
+  Order
+    client FK, status (6 states), delivery_type, total_amount
+    delivery_address, notes, order_date
+    STATUS choices: Pending → Confirmed → Preparing → Ready → Delivered | Cancelled
+
+  OrderItem     FK → Order + Product; quantity, price_at_purchase
+  Payment       FK → Order; amount, payment_method, is_successful
+  Notification  FK → Farmer|Client; type, message, is_read, related_order
+
+================================================================================
+  VIEWS  (farmersmarket/views.py)
+================================================================================
+
+  home()                    Latest 8 products
+  login_view()              Authenticate → dashboard
+  register_view()           Creates Farmer or Client profile
+  logout_view()             Clears cart session + logs out
+  dashboard_view()          Auto-routes: farmer_dashboard or client_dashboard
+                            Farmer gets: today_count, today_revenue, low_stock
+  marketplace_view()        Filter by q/category/farmer/min_price/max_price
+  product_detail_view()     Single product + ratings list
+  rate_product()            POST — update_or_create ProductRating
+  cart_view()               Session cart grouped by farmer
+  add_to_cart()             POST — validates stock before adding
+  remove_from_cart()        POST
+  update_cart()             POST — removes if qty=0
+  checkout_view()           GET: show; POST: create Order+Items, deduct stock,
+                            creates Mock Payment (always successful),
+                            notify farmers, clear cart
+  order_detail_view()       Order summary + progress tracker
+  update_order_status()     POST (farmer): Pending→Confirmed→Preparing→Ready→Delivered
+  farmer_earnings_view()    Revenue by period + best sellers + recent orders
+  mark_notifications_read() POST — marks all unread for current user
+
+  _simple_form_view()       Shared stub for admin CRUD views
+
+================================================================================
+  URLs  (farmermarket/urls.py)
+================================================================================
+
+  GET  /                              home
+  GET  /marketplace/                  marketplace
+  GET  /marketplace/<id>/             product_detail
+  POST /marketplace/<id>/rate/        rate_product
+  GET  /login/ POST                   login
+  GET  /register/ POST                register
+  GET  /logout/                       logout
+  GET  /dashboard/                    dashboard
+  GET  /earnings/                     farmer_earnings
+  GET  /cart/                         cart
+  POST /cart/add/<id>/                add_to_cart
+  POST /cart/remove/<id>/             remove_from_cart
+  POST /cart/update/<id>/             update_cart
+  GET  /checkout/ POST                checkout
+  GET  /orders/<id>/                  order_detail
+  POST /orders/<id>/status/           update_order_status
+  POST /notifications/read/           mark_notifications_read
+  GET  /add_product/ POST             add_product (farmer)
+
+================================================================================
+  TEMPLATES  (farmersmarket/templates/)
+================================================================================
+
+  base.html
+    - Sticky Black Cherry navbar
+    - 🔔 Bell icon dropdown (latest 5 notifs, mark-all-read inline)
+    - 🛒 Cart badge (item count from context processor)
+    - Toast system (JS): showToast(msg, 'success'|'error'|'info')
+      Django messages auto-render as toasts on page load
+    - Mobile bottom nav (Home/Shop/Cart/Dashboard) — visible <640px
+
+  home.html             Hero + featured products grid + value props
+  marketplace.html      Search/category/farmer/price filter bar
+                        Product cards: image, freshness badge, star rating,
+                        currency+price/unit, add-to-cart or "Login to Buy"
+  product_detail.html   Full product view, freshness, ratings list, star-input
+                        review form (clients only)
+  cart.html             Items grouped by farmer section; stock warnings (≤5);
+                        qty update + remove; Order Total + "Proceed to Checkout"
+  checkout.html         2-step indicator; farmer-grouped order summary;
+                        DPoD explanation box; delivery type toggle (shows address
+                        field only for Home Delivery)
+  order_detail.html     5-step progress tracker (Pending→Delivered);
+                        items, delivery info, palette-themed status badges
+  farmer_dashboard.html Quick stats (today orders, revenue, total products,
+                        low-stock alert card); product grid with stock colour;
+                        orders table with contextual action buttons;
+                        "Mark Delivered" button for Ready orders
+  client_dashboard.html Notification banner; orders table; fresh product grid
+                        with freshness badges and add-to-cart
+  farmer_earnings.html  Revenue cards (All Time / Month / Week / Today);
+                        Best Selling Products table; Recent Orders table
+
+================================================================================
+  ORDER STATE MACHINE
+================================================================================
+
+  VALID_TRANSITIONS = {
+      'Pending':   ['Confirmed', 'Cancelled'],
+      'Confirmed': ['Preparing', 'Cancelled'],
+      'Preparing': ['Ready'],
+      'Ready':     ['Delivered'],
+  }
+
+================================================================================
+  CURRENCY
+================================================================================
+
+  Per-product field on Product.currency (CharField, default='UGX').
+  Choices: UGX, KES, TZS, USD, EUR, GBP.
+  Shown consistently as "UGX 2,500 / kg" across all pages.
+
+================================================================================
+  MOCK PAYMENT
+================================================================================
+
+  Checkout creates a Payment record automatically with a random transaction ID.
+  Status is always "is_successful=True".
+
+================================================================================
+  TO RUN
+================================================================================
+
+  pip install -r requirements.txt
+  python manage.py migrate
+  python manage.py createsuperuser   # optional
+  python manage.py runserver
+  → http://127.0.0.1:8000
+
+================================================================================
+  PHASE 4 — RECOMMENDED NEXT STEPS
+================================================================================
+
+  4.1  Payment Gateway      Real integration (Stripe / Mobile Money);
+  4.2  Logistics            Rider profiles, order assignment, live tracking
+  4.3  Subscriptions        Weekly recurring baskets, smart substitutions
+  4.4  Analytics            Charts (Chart.js), demand heatmaps, CSV export
+  4.5  Admin Portal         Custom Django admin with user & dispute management
+  4.6  PWA / Push Notifs    Service worker + Web Push for mobile alerts
+  4.7  Distance Sorting     GeoDjango or Haversine to sort "Closest first"
+  4.8  Product Images       Pillow thumbnail compression + watermarking
+
+================================================================================

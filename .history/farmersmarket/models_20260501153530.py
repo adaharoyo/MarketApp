@@ -23,8 +23,12 @@ class Farm(models.Model):
 
 
 class Client(models.Model):
-    GENDER_OPTIONS = [("M", "Male"), ("F", "Female")]
-    ACCOUNT_STATUS = [("Active", "Active"), ("Inactive", "Inactive")]
+    GENDER_OPTIONS = [
+        ("M", "Male"),
+        ("F", "Female")
+    ]
+    ACCOUNT_STATUS = [("Active", "Active"),
+                      ("Inactive", "Inactive")]
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100)
     contact = models.CharField(max_length=20)
@@ -37,37 +41,9 @@ class Client(models.Model):
 
 
 class Product(models.Model):
-    CURRENCY_CHOICES = [
-        ('UGX', 'UGX - Ugandan Shilling'),
-        ('KES', 'KES - Kenyan Shilling'),
-        ('TZS', 'TZS - Tanzanian Shilling'),
-        ('USD', 'USD - US Dollar'),
-        ('EUR', 'EUR - Euro'),
-        ('GBP', 'GBP - British Pound'),
-    ]
-    UNIT_CHOICES = [
-        ('kg', 'kg'), ('g', 'g (grams)'), ('bunch', 'Bunch'),
-        ('piece', 'Piece'), ('litre', 'Litre'),
-        ('crate', 'Crate'), ('bag', 'Bag'), ('dozen', 'Dozen'),
-    ]
-    CATEGORY_CHOICES = [
-        ('vegetables', '🥬 Vegetables'),
-        ('fruits', '🍎 Fruits'),
-        ('grains', '🌾 Grains & Cereals'),
-        ('dairy', '🥛 Dairy & Eggs'),
-        ('herbs', '🌿 Herbs & Spices'),
-        ('legumes', '🫘 Legumes & Pulses'),
-        ('roots', '🥕 Roots & Tubers'),
-        ('other', '📦 Other'),
-    ]
-
     crop_name = models.CharField(max_length=100)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other', blank=True)
     quantity_available = models.PositiveIntegerField()
-    unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg')
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='UGX')
-    harvest_date = models.DateField(null=True, blank=True, help_text="When was this harvested?")
     farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, related_name='products')
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to='product_images/', blank=True, null=True)
@@ -75,73 +51,24 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @property
-    def freshness_label(self):
-        if not self.harvest_date:
-            return None
-        today = timezone.now().date()
-        days = (today - self.harvest_date).days
-        if days == 0:
-            return ('green', '🟢 Harvested today')
-        elif days == 1:
-            return ('yellow', '🟡 Yesterday')
-        elif days <= 3:
-            return ('yellow', f'🟡 {days} days ago')
-        else:
-            return ('red', f'🔴 {days} days ago')
-
-    @property
-    def avg_rating(self):
-        ratings = self.ratings.all()
-        if not ratings.exists():
-            return None
-        return round(sum(r.stars for r in ratings) / ratings.count(), 1)
-
-    @property
-    def rating_count(self):
-        return self.ratings.count()
-
     def __str__(self):
         return f"{self.crop_name} - {self.farmer.name}"
-
-
-class ProductRating(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ratings')
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='ratings')
-    stars = models.PositiveSmallIntegerField()  # 1–5
-    review = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('product', 'client')
-
-    def __str__(self):
-        return f"{self.stars}★ – {self.product.crop_name}"
-
-
-class Courier(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
-    name = models.CharField(max_length=100)
-    contact = models.CharField(max_length=20)
-    vehicle_type = models.CharField(max_length=50, blank=True, null=True, help_text="Bike, Car, Van, etc.")
-    is_available = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Courier: {self.name}"
 
 
 class Order(models.Model):
     ORDER_STATUS = [
         ("Pending", "Pending"),
         ("Confirmed", "Confirmed"),
+        ("Paid", "Paid"),
         ("Preparing", "Preparing"),
         ("Ready", "Ready for Pickup/Delivery"),
-        ("Out for Delivery", "Out for Delivery"),
         ("Delivered", "Delivered"),
-        ("Cancelled", "Cancelled"),
+        ("Cancelled", "Cancelled")
     ]
-    DELIVERY_TYPE = [("Pickup", "Pickup"), ("Delivery", "Delivery")]
+    DELIVERY_TYPE = [
+        ("Pickup", "Pickup"),
+        ("Delivery", "Delivery")
+    ]
     order_date = models.DateTimeField(default=timezone.now)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='orders')
     status = models.CharField(max_length=30, choices=ORDER_STATUS, default="Pending")
@@ -149,11 +76,9 @@ class Order(models.Model):
     delivery_address = models.CharField(max_length=200, blank=True, null=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(blank=True, null=True)
-    courier = models.ForeignKey(Courier, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
-    delivered_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"Order #{self.id} – {self.client.name}"
+        return f"Order #{self.id} - {self.client.name}"
 
 
 class OrderItem(models.Model):
@@ -163,14 +88,14 @@ class OrderItem(models.Model):
     price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"{self.quantity}× {self.product.crop_name}"
+        return f"{self.quantity}x {self.product.crop_name}"
 
 
 class Payment(models.Model):
     PAYMENT_OPTIONS = [
         ("Cash", "Cash"),
         ("Mobile Money", "Mobile Money"),
-        ("Card", "Card"),
+        ("Card", "Card")
     ]
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
     time_paid = models.DateTimeField(default=timezone.now)
@@ -184,12 +109,15 @@ class Payment(models.Model):
 
 
 class Notification(models.Model):
-    RECIPIENT_TYPE = [("Farmer", "Farmer"), ("Client", "Client")]
+    RECIPIENT_TYPE = [
+        ("Farmer", "Farmer"),
+        ("Client", "Client")
+    ]
     NOTIFICATION_TYPE = [
         ("Order", "New Order"),
         ("Payment", "Payment"),
         ("Status", "Order Status Update"),
-        ("Product", "Product Availability"),
+        ("Product", "Product Availability")
     ]
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_TYPE)
     farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
@@ -201,5 +129,5 @@ class Notification(models.Model):
     related_order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.notification_type} – {self.created_at}"
-
+        return f"{self.notification_type} - {self.created_at}"
+           

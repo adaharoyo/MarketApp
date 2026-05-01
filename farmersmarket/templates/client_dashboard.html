@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2rem; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+    <div>
+      <h1 style="color:#510d0a; font-size:1.5rem;">👋 Welcome, {{ client.name }}</h1>
+      <p style="color:#888; font-size:.88rem; margin-top:.2rem;">Browse fresh produce and track your orders.</p>
+    </div>
+    <a href="{% url 'cart' %}" class="btn btn-accent">🛒 View Cart{% if cart_count %} ({{ cart_count }}){% endif %}</a>
+  </div>
+
+  {% if notifications %}
+  <div style="background:#fdf3d0; border-left:4px solid #f3b61f; border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem;">
+      <strong style="color:#510d0a; font-size:.9rem;">🔔 {{ notifications|length }} update{{ notifications|length|pluralize }}</strong>
+      <form method="post" action="{% url 'mark_notifications_read' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" style="background:none; border:none; cursor:pointer; color:#888; font-size:.78rem; font-weight:600;">Mark all read ✓</button>
+      </form>
+    </div>
+    {% for n in notifications %}
+      <p style="font-size:.85rem; color:#555; margin-bottom:.3rem; padding-bottom:.3rem; border-bottom:1px solid #f0e8c4;">{{ n.message }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Orders -->
+  <div class="card" style="padding:0; overflow:hidden; margin-bottom:2rem;">
+    <div style="padding:.9rem 1.5rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="color:#510d0a; font-size:1rem;">Your Orders (Latest)</h2>
+      <a href="{% url 'client_orders_list' %}" style="color:#510d0a; font-size:.82rem; font-weight:700; text-decoration:none;">View All History →</a>
+    </div>
+    {% if orders %}
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:.88rem;">
+        <thead>
+          <tr style="background:#bbd8b3;">
+            <th style="padding:.8rem 1.25rem; text-align:left;">Order</th>
+            <th style="padding:.8rem 1rem; text-align:left;">Items</th>
+            <th style="padding:.8rem 1rem; text-align:left;">Date</th>
+            <th style="padding:.8rem 1rem; text-align:left;">Delivery</th>
+            <th style="padding:.8rem 1rem; text-align:left;">Status</th>
+            <th style="padding:.8rem 1rem; text-align:right;">Total</th>
+            <th style="padding:.8rem 1rem; text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+          <tr style="border-bottom:1px solid #f7f7f7;">
+            <td style="padding:.8rem 1.25rem; font-weight:700; color:#510d0a;">#{{ o.id }}</td>
+            <td style="padding:.8rem 1rem; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              {% for item in o.items.all %}
+                {{ item.product.crop_name }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td style="padding:.8rem 1rem; color:#888; font-size:.82rem;">{{ o.order_date|date:"M j, Y" }}</td>
+            <td style="padding:.8rem 1rem;">{{ o.delivery_type }}</td>
+            <td style="padding:.8rem 1rem;">
+              <span style="padding:.2rem .7rem; border-radius:10px; font-size:.78rem; font-weight:700;
+                background:{% if o.status == 'Delivered' %}#c8e6c9{% elif o.status == 'Cancelled' %}#ffcdd2{% elif o.status == 'Pending' %}#fdf3d0{% else %}#e3f2fd{% endif %};
+                color:{% if o.status == 'Delivered' %}#2e7d32{% elif o.status == 'Cancelled' %}#c62828{% elif o.status == 'Pending' %}#a29f15{% else %}#1565c0{% endif %};">
+                {{ o.status }}
+              </span>
+            </td>
+            <td style="padding:.8rem 1rem; text-align:right; font-weight:600;">{{ o.total_amount|floatformat:0 }}</td>
+            <td style="padding:.8rem 1rem; text-align:center;">
+              <div style="display:flex; gap:.5rem; justify-content:center; align-items:center;">
+                <a href="{% url 'order_detail' o.id %}" style="color:#510d0a; font-size:.82rem; font-weight:700; text-decoration:none;">View</a>
+                {% if o.status == 'Pending' %}
+                  <form method="post" action="{% url 'cancel_order' o.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" style="font-size:.7rem; padding:.25rem .5rem;">Cancel</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <div style="padding:3rem; text-align:center; color:#888;">No orders yet. <a href="{% url 'marketplace' %}" style="color:#510d0a; font-weight:700;">Shop now →</a></div>
+    {% endif %}
+  </div>
+
+  <!-- Products -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <h2 style="color:#510d0a; font-size:1rem;">🛍 Fresh Produce (Latest)</h2>
+    <a href="{% url 'marketplace' %}" style="color:#510d0a; font-size:.85rem; font-weight:700; text-decoration:none;">View Marketplace →</a>
+  </div>
+  {% if products %}
+  <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1.25rem; margin-bottom:3rem;">
+    {% for p in products %}
+    <div class="card" style="padding:0; overflow:hidden; position:relative; transition:transform .25s,box-shadow .25s;"
+         onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 10px 26px rgba(81,13,10,.12)'"
+         onmouseout="this.style.transform='';this.style.boxShadow=''">
+      {% if p.image %}
+        <img src="{{ p.image.url }}" alt="{{ p.crop_name }}" style="width:100%; height:160px; object-fit:cover;">
+      {% else %}
+        <div style="width:100%; height:160px; background:linear-gradient(135deg,#f8ede3,#fdf3d0); display:flex; align-items:center; justify-content:center; font-size:3rem;">🌿</div>
+      {% endif %}
+      {% with fresh=p.freshness_label %}
+        {% if fresh %}
+          <div style="position:absolute; top:.5rem; left:.5rem; background:{% if fresh.0 == 'green' %}#2e7d32{% else %}#a29f15{% endif %}; color:#fff; padding:.15rem .55rem; border-radius:20px; font-size:.68rem; font-weight:700;">{{ fresh.1 }}</div>
+        {% endif %}
+      {% endwith %}
+      <div style="padding:.9rem;">
+        <h3 style="color:#510d0a; font-size:.9rem; font-weight:700; margin-bottom:.2rem;">{{ p.crop_name }}</h3>
+        <p style="color:#888; font-size:.78rem; margin-bottom:.4rem;">{{ p.farmer.name }}</p>
+        <p style="font-weight:700; color:#191102; margin-bottom:.5rem;">{{ p.currency }} {{ p.price|floatformat:0 }} <span style="color:#aaa; font-weight:400; font-size:.78rem;">/ {{ p.get_unit_display }}</span></p>
+        <form method="post" action="{% url 'add_to_cart' p.id %}" style="display:flex; gap:.4rem;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'dashboard' %}">
+          <input type="number" name="quantity" value="1" min="1" max="{{ p.quantity_available }}"
+                 style="width:55px; padding:.4rem; border:1.5px solid #ddd; border-radius:7px; text-align:center; font-family:inherit; font-size:.88rem;">
+          <button type="submit" class="btn btn-primary" style="flex:1; font-size:.82rem; padding:.45rem;">🛒 Add</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Product Pagination -->
+  {% if products_paginated %}
+  <div style="padding:1rem; border-top:1px solid #f0e8c4; display:flex; justify-content:center; gap:.5rem; align-items:center; background:#faf9f6; margin-bottom:2rem; border-radius:10px;">
+    {% if products.has_previous %}
+      <a href="?product_page={{ products.previous_page_number }}&order_page={{ orders.number }}" class="btn btn-sm" style="background:#eee; color:#555;">« Previous</a>
+    {% endif %}
+    <span style="font-size:.85rem; color:#888;">Page {{ products.number }} of {{ products.paginator.num_pages }}</span>
+    {% if products.has_next %}
+      <a href="?product_page={{ products.next_page_number }}&order_page={{ orders.number }}" class="btn btn-sm" style="background:#eee; color:#555;">Next »</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <p style="color:#888; margin-bottom:3rem;">No products available.</p>
+  {% endif %}
+</div>
+{% endblock %}
