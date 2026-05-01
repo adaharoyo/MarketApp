@@ -147,10 +147,18 @@
     .bottom-nav a .icon { font-size:1.3rem; }
     .bottom-nav a.active, .bottom-nav a:hover { color:var(--primary); }
 
+    @media (max-width: 768px) {
+      .hero { padding: 3rem 1.5rem; }
+      .hero h1 { font-size: 2.1rem; }
+      .hero p { font-size: 1rem; }
+    }
+
     @media (max-width: 640px) {
       .bottom-nav { display:block; }
       .nav-links   { display:none; }
       body { padding-bottom:80px; }
+      .container { padding: 0 1rem; }
+      .card { padding: 1.1rem; }
     }
   </style>
 </head>

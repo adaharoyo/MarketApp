@@ -1,1 +1,1 @@
-web: python manage.py migrate && gunicorn farmermarket.wsgi
+web: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn farmermarket.wsgi
