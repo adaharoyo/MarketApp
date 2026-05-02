@@ -147,18 +147,65 @@
     .bottom-nav a .icon { font-size:1.3rem; }
     .bottom-nav a.active, .bottom-nav a:hover { color:var(--primary); }
 
+    /* ── TABLET ── */
     @media (max-width: 768px) {
-      .hero { padding: 3rem 1.5rem; }
-      .hero h1 { font-size: 2.1rem; }
-      .hero p { font-size: 1rem; }
+      .hero { padding: 3.5rem 1.25rem; }
+      .hero h1 { font-size: 1.9rem; line-height: 1.25; }
+      .hero p  { font-size: .95rem; }
+      .checkout-grid { grid-template-columns: 1fr !important; }
     }
 
+    /* ── MOBILE ── */
     @media (max-width: 640px) {
-      .bottom-nav { display:block; }
-      .nav-links   { display:none; }
-      body { padding-bottom:80px; }
-      .container { padding: 0 1rem; }
-      .card { padding: 1.1rem; }
+      .bottom-nav { display: block; }
+      .nav-links   { display: none; }
+      body { padding-bottom: 80px; font-size: 15px; }
+      .container { padding: 0 .9rem; }
+      .card { padding: 1rem; }
+
+      /* Hero */
+      .hero { padding: 2.5rem 1rem; }
+      .hero h1 { font-size: 1.6rem; }
+      .hero p  { font-size: .88rem; margin-bottom: 1.5rem; }
+
+      /* Buttons — full-width in hero */
+      .hero .btn { width: 100%; text-align: center; }
+
+      /* Tables → hidden on mobile; .mob-cards shown instead */
+      .mob-table { display: none; }
+      .mob-cards  { display: block; }
+
+      /* Toast */
+      #toast-container { right: .5rem; left: .5rem; }
+      .toast { min-width: unset; max-width: 100%; width: 100%; }
+
+      /* Checkout */
+      .checkout-grid { grid-template-columns: 1fr !important; }
+
+      /* Product grid — 2 columns on phone */
+      .prod-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: .75rem !important;
+      }
+      .prod-grid .p-img { height: 130px; }
+
+      /* Marketplace filter bar — vertical stack */
+      .filter-bar { flex-direction: column !important; gap: .5rem !important; }
+      .filter-bar > div,
+      .filter-bar > button,
+      .filter-bar > a { width: 100% !important; min-width: unset !important; flex: unset !important; }
+
+      /* Dashboard stat grid */
+      .stat-grid { grid-template-columns: repeat(2,1fr) !important; }
+
+      /* Farmer action buttons — stack vertically */
+      .order-actions { flex-direction: column !important; gap: .35rem !important; }
+      .order-actions .btn { width: 100%; }
+
+      /* Page headers */
+      .page-header { flex-direction: column !important; align-items: flex-start !important; gap: .6rem !important; }
+      .page-header-actions { display: flex; gap: .5rem; flex-wrap: wrap; width: 100%; }
+      .page-header-actions .btn { flex: 1; text-align: center; font-size: .82rem; }
     }
   </style>
 </head>
