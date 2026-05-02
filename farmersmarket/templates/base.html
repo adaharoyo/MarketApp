@@ -20,8 +20,8 @@
     body { font-family:'Inter',sans-serif; background:var(--bg); color:#1a1a1a; padding-bottom:70px; }
     a { color:inherit; }
 
-    /* ── NAV ── */
-    nav {
+    /* ── TOP NAV ── */
+    .top-nav {
       background:var(--primary);
       padding:.85rem 1.5rem;
       display:flex; justify-content:space-between; align-items:center;
@@ -231,21 +231,32 @@
 </head>
 <body>
   <!-- NAV -->
-  <nav>
+  <nav class="top-nav">
     <a href="{% url 'home' %}" class="logo">🌱 Market Hub</a>
-    <ul class="nav-links">
-      <li><a href="{% url 'home' %}">Home</a></li>
-      <li><a href="{% url 'marketplace' %}">Marketplace</a></li>
+    
+    <div style="display:flex; align-items:center; gap:1rem;">
+      <ul class="nav-links">
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li><a href="{% url 'marketplace' %}">Marketplace</a></li>
+        {% if user.is_authenticated %}
+          <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+          <!-- Cart -->
+          <li>
+            <a href="{% url 'cart' %}" class="{% if cart_count %}badge-pill{% endif %}">
+              🛒{% if cart_count %} {{ cart_count }}{% else %} Cart{% endif %}
+            </a>
+          </li>
+          <li><a href="{% url 'logout' %}">Logout</a></li>
+        {% else %}
+          <li><a href="{% url 'cart' %}">🛒 Cart</a></li>
+          <li><a href="{% url 'login' %}">Login</a></li>
+          <li><a href="{% url 'register' %}" class="badge-pill">Register</a></li>
+        {% endif %}
+      </ul>
+
       {% if user.is_authenticated %}
-        <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
-        <!-- Cart -->
-        <li>
-          <a href="{% url 'cart' %}" class="{% if cart_count %}badge-pill{% endif %}">
-            🛒{% if cart_count %} {{ cart_count }}{% else %} Cart{% endif %}
-          </a>
-        </li>
         <!-- Bell -->
-        <li class="bell-wrap">
+        <div class="bell-wrap">
           <button class="bell-btn" onclick="toggleBell(event)" title="Notifications">
             🔔
             {% if unread_notif_count %}
@@ -271,14 +282,9 @@
               <div class="notif-empty">No notifications yet</div>
             {% endif %}
           </div>
-        </li>
-        <li><a href="{% url 'logout' %}">Logout</a></li>
-      {% else %}
-        <li><a href="{% url 'cart' %}">🛒 Cart</a></li>
-        <li><a href="{% url 'login' %}">Login</a></li>
-        <li><a href="{% url 'register' %}" class="badge-pill">Register</a></li>
+        </div>
       {% endif %}
-    </ul>
+    </div>
   </nav>
 
   <!-- TOAST CONTAINER -->
