@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+
+  <!-- Search & Filter Bar -->
+  <form method="get" style="margin-top:2rem; background:#fff; border-radius:16px; padding:1.25rem 1.5rem; box-shadow:0 2px 12px rgba(0,0,0,.07); display:flex; flex-wrap:wrap; gap:.75rem; align-items:flex-end;">
+    <div style="flex:2; min-width:180px;">
+      <label style="font-weight:600; font-size:.82rem; color:#666; display:block; margin-bottom:.35rem;">🔍 Search</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Tomatoes, maize…"
+             style="width:100%; padding:.7rem 1rem; border:1.5px solid #ddd; border-radius:9px; font-size:.95rem; font-family:inherit;"
+             onfocus="this.style.borderColor='#510d0a'" onblur="this.style.borderColor='#ddd'">
+    </div>
+    <div style="flex:1; min-width:110px;">
+      <label style="font-weight:600; font-size:.82rem; color:#666; display:block; margin-bottom:.35rem;">Category</label>
+      <select name="category" style="width:100%; padding:.7rem; border:1.5px solid #ddd; border-radius:9px; font-size:.9rem; font-family:inherit;">
+        <option value="">All</option>
+        {% for val,label in category_choices %}
+          <option value="{{ val }}" {% if category == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex:1; min-width:110px;">
+      <label style="font-weight:600; font-size:.82rem; color:#666; display:block; margin-bottom:.35rem;">Farmer</label>
+      <select name="farmer" style="width:100%; padding:.7rem; border:1.5px solid #ddd; border-radius:9px; font-size:.9rem; font-family:inherit;">
+        <option value="">All Farmers</option>
+        {% for f in farmers %}
+          <option value="{{ f.id }}" {% if farmer_id == f.id|stringformat:"s" %}selected{% endif %}>{{ f.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex:1; min-width:90px;">
+      <label style="font-weight:600; font-size:.82rem; color:#666; display:block; margin-bottom:.35rem;">Min ({{ request.GET.currency|default:"price" }})</label>
+      <input type="number" name="min_price" value="{{ min_price }}" min="0" step="any" placeholder="0"
+             style="width:100%; padding:.7rem; border:1.5px solid #ddd; border-radius:9px; font-size:.9rem;">
+    </div>
+    <div style="flex:1; min-width:90px;">
+      <label style="font-weight:600; font-size:.82rem; color:#666; display:block; margin-bottom:.35rem;">Max</label>
+      <input type="number" name="max_price" value="{{ max_price }}" min="0" step="any" placeholder="∞"
+             style="width:100%; padding:.7rem; border:1.5px solid #ddd; border-radius:9px; font-size:.9rem;">
+    </div>
+    <div style="display:flex; gap:.5rem; align-items:flex-end;">
+      <button type="submit" class="btn btn-primary">Search</button>
+      <a href="{% url 'marketplace' %}" class="btn btn-secondary" style="padding:.7rem 1rem;">Clear</a>
+    </div>
+  </form>
+
+  <p style="margin:1.25rem 0 .5rem; color:#888; font-size:.88rem;">
+    <strong style="color:#191102;">{{ products|length }}</strong> product{{ products|length|pluralize }}{% if q %} for "<em>{{ q }}</em>"{% endif %}
+  </p>
+
+  {% if products %}
+  <div class="prod-grid" style="margin-bottom:4rem;">
+    {% for product in products %}
+    <div class="p-card">
+      <a href="{% url 'product_detail' product.id %}" style="text-decoration:none; color:inherit;">
+        <!-- Image -->
+        {% if product.image %}
+          <img src="{{ product.image.url }}" alt="{{ product.crop_name }}" class="p-img">
+        {% else %}
+          <div class="p-img p-img-placeholder">🌿</div>
+        {% endif %}
+
+        <!-- Freshness badge -->
+        {% with fresh=product.freshness_label %}
+          {% if fresh %}
+            <div style="position:absolute; top:.6rem; left:.6rem; background:{% if fresh.0 == 'green' %}#2e7d32{% elif fresh.0 == 'yellow' %}#a29f15{% else %}#c62828{% endif %}; color:#fff; padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:700;">
+              {{ fresh.1 }}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Body -->
+        <div style="padding:1rem; position:relative;">
+          <div style="display:flex; align-items:start; justify-content:space-between; margin-bottom:.3rem;">
+            <h3 style="color:#510d0a; font-size:1rem; font-weight:700;">{{ product.crop_name }}</h3>
+            {% if product.category %}
+              <span style="font-size:.75rem; background:#fdf3d0; color:#a29f15; padding:.15rem .5rem; border-radius:8px; font-weight:600; white-space:nowrap; margin-left:.4rem;">{{ product.get_category_display|truncatechars:12 }}</span>
+            {% endif %}
+          </div>
+          <p style="color:#888; font-size:.8rem; margin-bottom:.4rem;">by {{ product.farmer.name }}</p>
+
+          <!-- Stars -->
+          {% if product.avg_rating %}
+            <p style="font-size:.8rem; color:#a29f15; margin-bottom:.4rem;">
+              {% with r=product.avg_rating %}
+                {% for i in "12345" %}{% if forloop.counter <= r %}★{% else %}☆{% endif %}{% endfor %}
+              {% endwith %}
+              <span style="color:#888;">({{ product.rating_count }})</span>
+            </p>
+          {% endif %}
+
+          <p style="font-weight:700; font-size:1.15rem; color:#191102; margin-bottom:.35rem;">{{ product.currency }} {{ product.price|floatformat:0 }}<span style="font-size:.8rem; color:#888; font-weight:400;"> / {{ product.get_unit_display }}</span></p>
+          <p style="color:#666; font-size:.8rem; margin-bottom:.75rem;">Stock: {{ product.quantity_available }} {{ product.unit }}</p>
+        </div>
+      </a>
+
+      <!-- Add to cart -->
+      <div style="padding:0 1rem 1rem;">
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'add_to_cart' product.id %}" style="display:flex; gap:.4rem;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <input type="number" name="quantity" value="1" min="1" max="{{ product.quantity_available }}"
+                   style="width:60px; padding:.45rem; border:1.5px solid #ddd; border-radius:8px; text-align:center; font-size:.9rem; font-family:inherit;">
+            <button type="submit" class="btn btn-primary" style="flex:1; font-size:.88rem; padding:.5rem;">🛒 Add</button>
+          </form>
+        {% else %}
+          <a href="{% url 'login' %}?next={{ request.get_full_path }}" class="btn btn-primary" style="display:block; text-align:center; padding:.55rem;">Login to Buy</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if is_paginated %}
+  <div style="padding:1.5rem; display:flex; justify-content:center; gap:.75rem; align-items:center; margin-bottom:4rem;">
+    {% if products.has_previous %}
+      <a href="?page={{ products.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if farmer_id %}&farmer={{ farmer_id }}{% endif %}" class="btn btn-secondary" style="background:#eee; color:#555; border:none; padding:.5rem 1rem;">« Previous</a>
+    {% endif %}
+    
+    <span style="font-size:.9rem; color:#888; font-weight:600; background:#fff; padding:.5rem 1rem; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.05);">Page {{ products.number }} of {{ products.paginator.num_pages }}</span>
+    
+    {% if products.has_next %}
+      <a href="?page={{ products.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if farmer_id %}&farmer={{ farmer_id }}{% endif %}" class="btn btn-secondary" style="background:#eee; color:#555; border:none; padding:.5rem 1rem;">Next »</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div style="text-align:center; margin:5rem 0; color:#888;">
+    <div style="font-size:4rem;">🌾</div>
+    <h3 style="margin:.5rem 0; color:#510d0a;">No products found</h3>
+    <p>Try adjusting your search or filters.</p>
+    <a href="{% url 'marketplace' %}" class="btn btn-primary" style="margin-top:1rem;">View All</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
