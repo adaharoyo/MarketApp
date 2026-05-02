@@ -82,6 +82,10 @@
         </span>
         <div style="margin-top:.75rem; border-top:1px solid #ede8e0; padding-top:.75rem; display:flex; justify-content:space-between; align-items:center;">
           <a href="{% url 'edit_product' p.id %}" style="color:#1565c0; font-size:.8rem; font-weight:700; text-decoration:none;">✏️ Edit Product</a>
+          <form method="post" action="{% url 'delete_product' p.id %}" style="margin:0;" onsubmit="return confirm('Are you sure you want to delete this product?');">
+            {% csrf_token %}
+            <button type="submit" style="background:none; border:none; cursor:pointer; color:#c62828; font-size:.8rem; font-weight:700; padding:0;">🗑️ Delete</button>
+          </form>
         </div>
       </div>
       {% endfor %}

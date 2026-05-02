@@ -583,6 +583,18 @@ def edit_product_view(request, product_id):
     return render(request, 'generic_form.html', {'form': form, 'title': f'Edit {product.crop_name}'})
 
 
+# ─── DELETE PRODUCT (FARMER) ──────────────────────────────────────────────────
+@require_POST
+def delete_product_view(request, product_id):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    farmer = get_object_or_404(Farmer, user=request.user)
+    product = get_object_or_404(Product, pk=product_id, farmer=farmer)
+    name = product.crop_name
+    product.delete()
+    messages.success(request, f'{name} has been deleted.')
+    return redirect('dashboard')
+
 # ─── CANCEL ORDER (CLIENT) ────────────────────────────────────────────────────
 @require_POST
 def cancel_order_view(request, order_id):

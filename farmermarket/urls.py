@@ -17,7 +17,7 @@ from farmersmarket.views import (
     # notifications
     mark_notifications_read,
     # product management
-    add_product_view, edit_product_view,
+    add_product_view, edit_product_view, delete_product_view,
     # order actions
     cancel_order_view,
     # dedicated list views
@@ -63,6 +63,7 @@ urlpatterns = [
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),
     path('edit_product/<int:product_id>/', edit_product_view, name='edit_product'),
+    path('delete_product/<int:product_id>/', delete_product_view, name='delete_product'),
 
     # Order cancellation
     path('orders/<int:order_id>/cancel/', cancel_order_view, name='cancel_order'),
