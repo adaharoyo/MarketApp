@@ -50,16 +50,29 @@
   <!-- Items -->
   <div class="card" style="padding:0; overflow:hidden; margin-bottom:1.5rem;">
     <div style="padding:.85rem 1.25rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; font-weight:700; color:#510d0a; font-size:.92rem;">Items</div>
-    {% for item in order.items.all %}
-    <div style="padding:.9rem 1.25rem; display:flex; justify-content:space-between; border-bottom:1px solid #f7f7f7; align-items:center;">
-      <div>
-        <strong style="font-size:.92rem;">{{ item.product.crop_name }}</strong>
-        <span style="color:#888; font-size:.82rem;"> × {{ item.quantity }} {{ item.product.get_unit_display }}</span>
-        <br><span style="color:#aaa; font-size:.78rem;">by {{ item.product.farmer.name }}</span>
+    {% if is_farmer and not is_client %}
+      {% for item in farmer_items %}
+      <div style="padding:.9rem 1.25rem; display:flex; justify-content:space-between; border-bottom:1px solid #f7f7f7; align-items:center;">
+        <div>
+          <strong style="font-size:.92rem;">{{ item.product.crop_name }}</strong>
+          <span style="color:#888; font-size:.82rem;"> × {{ item.quantity }} {{ item.product.get_unit_display }}</span>
+          <br><span style="color:#aaa; font-size:.78rem;">by {{ item.product.farmer.name }}</span>
+        </div>
+        <span style="font-weight:600; color:#191102;">{{ item.product.currency }} {{ item.price_at_purchase|floatformat:0 }}</span>
       </div>
-      <span style="font-weight:600; color:#191102;">{{ item.product.currency }} {{ item.price_at_purchase|floatformat:0 }}</span>
-    </div>
-    {% endfor %}
+      {% endfor %}
+    {% else %}
+      {% for item in order.items.all %}
+      <div style="padding:.9rem 1.25rem; display:flex; justify-content:space-between; border-bottom:1px solid #f7f7f7; align-items:center;">
+        <div>
+          <strong style="font-size:.92rem;">{{ item.product.crop_name }}</strong>
+          <span style="color:#888; font-size:.82rem;"> × {{ item.quantity }} {{ item.product.get_unit_display }}</span>
+          <br><span style="color:#aaa; font-size:.78rem;">by {{ item.product.farmer.name }}</span>
+        </div>
+        <span style="font-weight:600; color:#191102;">{{ item.product.currency }} {{ item.price_at_purchase|floatformat:0 }}</span>
+      </div>
+      {% endfor %}
+    {% endif %}
     <div style="padding:.9rem 1.25rem; display:flex; justify-content:space-between; font-weight:700; font-size:1.05rem; background:#faf9f6;">
       <span>Total</span>
       <span style="color:#510d0a;">{{ order.total_amount|floatformat:0 }}</span>

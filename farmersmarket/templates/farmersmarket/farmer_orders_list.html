@@ -9,7 +9,7 @@
     <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Dashboard</a>
   </div>
 
-  {% if orders %}
+  {% if orders_with_earnings %}
   <div class="card" style="padding:0; overflow:hidden; border:1px solid #ede8e0;">
     <div style="overflow-x:auto;">
       <table style="width:100%; border-collapse:collapse; font-size:.9rem;">
@@ -19,48 +19,48 @@
             <th style="padding:1rem; text-align:left;">Client</th>
             <th style="padding:1rem; text-align:left;">Order Date</th>
             <th style="padding:1rem; text-align:left;">Current Status</th>
-            <th style="padding:1rem; text-align:right;">Earnings</th>
+            <th style="padding:1rem; text-align:right;">Your Earnings</th>
             <th style="padding:1rem; text-align:center;">Next Step</th>
           </tr>
         </thead>
         <tbody>
-          {% for order in orders %}
+          {% for item in orders_with_earnings %}
           <tr style="border-bottom:1px solid #f0f0f0;">
-            <td style="padding:1rem 1.25rem;"><a href="{% url 'order_detail' order.id %}" style="color:#510d0a; font-weight:700; text-decoration:none;">#{{ order.id }}</a></td>
-            <td style="padding:1rem;">{{ order.client.name }}</td>
-            <td style="padding:1rem; color:#888;">{{ order.order_date|date:"M j, Y" }}</td>
+            <td style="padding:1rem 1.25rem;"><a href="{% url 'order_detail' item.order.id %}" style="color:#510d0a; font-weight:700; text-decoration:none;">#{{ item.order.id }}</a></td>
+            <td style="padding:1rem;">{{ item.order.client.name }}</td>
+            <td style="padding:1rem; color:#888;">{{ item.order.order_date|date:"M j, Y" }}</td>
             <td style="padding:1rem;">
               <span style="padding:.2rem .75rem; border-radius:12px; font-size:.78rem; font-weight:700;
-                background:{% if order.status == 'Delivered' %}#c8e6c9{% elif order.status == 'Cancelled' %}#ffcdd2{% elif order.status == 'Pending' %}#fdf3d0{% else %}#e3f2fd{% endif %};
-                color:{% if order.status == 'Delivered' %}#2e7d32{% elif order.status == 'Cancelled' %}#c62828{% elif order.status == 'Pending' %}#a29f15{% else %}#1565c0{% endif %};">
-                {{ order.status }}
+                background:{% if item.order.status == 'Delivered' %}#c8e6c9{% elif item.order.status == 'Cancelled' %}#ffcdd2{% elif item.order.status == 'Pending' %}#fdf3d0{% else %}#e3f2fd{% endif %};
+                color:{% if item.order.status == 'Delivered' %}#2e7d32{% elif item.order.status == 'Cancelled' %}#c62828{% elif item.order.status == 'Pending' %}#a29f15{% else %}#1565c0{% endif %};">
+                {{ item.order.status }}
               </span>
             </td>
-            <td style="padding:1rem; text-align:right; font-weight:700;">{{ currency }} {{ order.total_amount|floatformat:0 }}</td>
+            <td style="padding:1rem; text-align:right; font-weight:700;">{{ currency }} {{ item.farmer_earnings|floatformat:0 }}</td>
             <td style="padding:1rem; text-align:center;">
-              {% if order.status == 'Pending' %}
+              {% if item.order.status == 'Pending' %}
                 <div style="display:flex; gap:.3rem; justify-content:center;">
-                  <form method="post" action="{% url 'update_order_status' order.id %}" style="margin:0;">
+                  <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
                     {% csrf_token %}<input type="hidden" name="status" value="Confirmed">
                     <button type="submit" class="btn btn-primary btn-sm">Accept Order</button>
                   </form>
-                  <form method="post" action="{% url 'update_order_status' order.id %}" style="margin:0;">
+                  <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
                     {% csrf_token %}<input type="hidden" name="status" value="Cancelled">
                     <button type="submit" class="btn btn-danger btn-sm">Reject</button>
                   </form>
                 </div>
-              {% elif order.status == 'Confirmed' %}
-                <form method="post" action="{% url 'update_order_status' order.id %}" style="margin:0;">
+              {% elif item.order.status == 'Confirmed' %}
+                <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
                   {% csrf_token %}<input type="hidden" name="status" value="Preparing">
                   <button type="submit" class="btn btn-accent btn-sm">Start Packing</button>
                 </form>
-              {% elif order.status == 'Preparing' %}
-                <form method="post" action="{% url 'update_order_status' order.id %}" style="margin:0;">
+              {% elif item.order.status == 'Preparing' %}
+                <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
                   {% csrf_token %}<input type="hidden" name="status" value="Ready">
                   <button type="submit" class="btn btn-primary btn-sm">Ready for Delivery</button>
                 </form>
-              {% elif order.status == 'Ready' %}
-                <form method="post" action="{% url 'update_order_status' order.id %}" style="margin:0;">
+              {% elif item.order.status == 'Ready' %}
+                <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
                   {% csrf_token %}<input type="hidden" name="status" value="Delivered">
                   <button type="submit" class="btn btn-primary btn-sm">Confirm Delivery ✓</button>
                 </form>

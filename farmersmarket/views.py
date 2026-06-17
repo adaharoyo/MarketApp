@@ -118,18 +118,33 @@ def dashboard_view(request):
 
         notifs   = Notification.objects.filter(farmer=farmer, is_read=False).order_by('-created_at')[:5]
 
-        # Quick stats
+        # Quick stats - calculate farmer's actual earnings, not full order amount
         today = timezone.now().date()
         today_orders = (Order.objects.filter(items__product__farmer=farmer, order_date__date=today)
                         .distinct())
-        today_revenue = sum(
-            o.total_amount for o in today_orders if o.status == 'Delivered'
-        )
+        # Calculate farmer's earnings only from their items
+        today_revenue = 0
+        for order in today_orders:
+            if order.status == 'Delivered':
+                farmer_items = order.items.filter(product__farmer=farmer)
+                today_revenue += sum(item.price_at_purchase * item.quantity for item in farmer_items)
+        
         low_stock = Product.objects.filter(farmer=farmer, quantity_available__lte=5, is_available=True)
         currency = farmer.products.first().currency if farmer.products.exists() else 'UGX'
 
+        # Prepare orders with earnings for display
+        orders_with_earnings = []
+        for order in orders:
+            farmer_items = order.items.filter(product__farmer=farmer)
+            farmer_earnings = sum(item.price_at_purchase * item.quantity for item in farmer_items)
+            orders_with_earnings.append({
+                'order': order,
+                'farmer_earnings': farmer_earnings,
+            })
+
         return render(request, 'farmer_dashboard.html', {
             'farmer': farmer, 'products': products, 'orders': orders,
+            'orders_with_earnings': orders_with_earnings,
             'notifications': notifs, 'today_count': today_orders.count(),
             'today_revenue': today_revenue, 'low_stock': low_stock,
             'currency': currency,
@@ -178,9 +193,20 @@ def farmer_orders_view(request):
     paginator = Paginator(orders_qs, 15)
     page = request.GET.get('page')
     orders = paginator.get_page(page)
+    
+    # Calculate farmer's earnings for each order (not total order amount)
+    orders_with_earnings = []
+    for order in orders:
+        farmer_items = order.items.filter(product__farmer=farmer)
+        farmer_earnings = sum(item.price_at_purchase * item.quantity for item in farmer_items)
+        orders_with_earnings.append({
+            'order': order,
+            'farmer_earnings': farmer_earnings,
+        })
+    
     currency = farmer.products.first().currency if farmer.products.exists() else 'UGX'
     return render(request, 'farmersmarket/farmer_orders_list.html', {
-        'farmer': farmer, 'orders': orders, 'currency': currency, 'is_paginated': orders.has_other_pages()
+        'farmer': farmer, 'orders_with_earnings': orders_with_earnings, 'orders': orders, 'currency': currency, 'is_paginated': orders.has_other_pages()
     })
 
 def client_orders_view(request):
@@ -357,12 +383,21 @@ def checkout_view(request):
         delivery_address = request.POST.get('delivery_address', '')
         notes            = request.POST.get('notes', '')
 
-        order = Order.objects.create(
-            client=client, delivery_type=delivery_type,
-            delivery_address=delivery_address,
-            total_amount=total, notes=notes, status='Pending',
-        )
+        # Create ONE ORDER PER FARMER to ensure tenant isolation
+        # Each farmer can independently accept/decline their items
+        order_ids = []
         for group in farmers_data:
+            farmer = group['farmer']
+            farmer_total = sum(item['subtotal'] for item in group['items'])
+            
+            # Create separate order for this farmer
+            order = Order.objects.create(
+                client=client, delivery_type=delivery_type,
+                delivery_address=delivery_address,
+                total_amount=farmer_total, notes=notes, status='Pending',
+            )
+            order_ids.append(order.id)
+            
             for item in group['items']:
                 product = item['product']
                 OrderItem.objects.create(
@@ -373,25 +408,28 @@ def checkout_view(request):
                 if product.quantity_available <= 0:
                     product.is_available = False
                 product.save()
-                Notification.objects.create(
-                    recipient_type='Farmer', farmer=product.farmer,
-                    notification_type='Order',
-                    message=f'New order #{order.id}: {item["qty"]}× {product.crop_name} from {client.name}.',
-                    related_order=order,
-                )
-
-        # Create mock payment
-        Payment.objects.create(
-            order=order,
-            amount=total,
-            payment_method='Mobile Money', # Mock default
-            transaction_id=f'MOCK-{random.randint(10000, 99999)}',
-            is_successful=True
-        )
+            
+            # Create mock payment for this order
+            Payment.objects.create(
+                order=order,
+                amount=farmer_total,
+                payment_method='Mobile Money', # Mock default
+                transaction_id=f'MOCK-{random.randint(10000, 99999)}',
+                is_successful=True
+            )
+            
+            # Notify farmer
+            Notification.objects.create(
+                recipient_type='Farmer', farmer=farmer,
+                notification_type='Order',
+                message=f'New order #{order.id}: {len(group["items"])} item(s) from {client.name}.',
+                related_order=order,
+            )
 
         _save_cart(request, {})
-        messages.success(request, f'Order #{order.id} placed and paid via Mock Payment!')
-        return redirect('order_detail', order_id=order.id)
+        messages.success(request, f'{len(order_ids)} order(s) placed and paid via Mock Payment!')
+        # Redirect to first order (can update to show all orders)
+        return redirect('order_detail', order_id=order_ids[0] if order_ids else 1)
 
     return render(request, 'checkout.html', {
         'farmers_data': farmers_data, 'total': total, 'client': client,
@@ -414,8 +452,18 @@ def order_detail_view(request, order_id):
         messages.error(request, 'Access denied.')
         return redirect('dashboard')
 
+    # For farmers: filter items to only show their own products
+    farmer_items = order.items.all()
+    if is_farmer and not is_client:
+        try:
+            farmer = Farmer.objects.get(user=request.user)
+            farmer_items = order.items.filter(product__farmer=farmer)
+        except Farmer.DoesNotExist:
+            pass
+
     return render(request, 'order_detail.html', {
         'order': order,
+        'farmer_items': farmer_items,
         'is_client': is_client,
         'is_farmer': is_farmer,
     })
@@ -477,7 +525,13 @@ def farmer_earnings_view(request):
     month_start= today - datetime.timedelta(days=30)
 
     def revenue_for(qs):
-        return sum(o.total_amount for o in qs if o.status == 'Delivered')
+        """Calculate farmer's revenue (not total order amount)"""
+        total = 0
+        for order in qs:
+            if order.status == 'Delivered':
+                farmer_items = order.items.filter(product__farmer=farmer)
+                total += sum(item.price_at_purchase * item.quantity for item in farmer_items)
+        return total
 
     all_orders   = Order.objects.filter(items__product__farmer=farmer).distinct()
     week_orders  = all_orders.filter(order_date__date__gte=week_start)
@@ -604,7 +658,7 @@ def cancel_order_view(request, order_id):
     order  = get_object_or_404(Order, pk=order_id, client=client)
 
     if order.status == 'Pending':
-        # Restore stock
+        # Restore stock for THIS ORDER ONLY (not other orders from other farms)
         for item in order.items.all():
             item.product.quantity_available += item.quantity
             if item.product.quantity_available > 0:
@@ -614,15 +668,14 @@ def cancel_order_view(request, order_id):
         order.status = 'Cancelled'
         order.save()
 
-        # Notify farmer(s)
-        farmers = Farmer.objects.filter(products__orderitem__order=order).distinct()
-        for f in farmers:
-            Notification.objects.create(
-                recipient_type='Farmer', farmer=f,
-                notification_type='Status',
-                message=f'Order #{order.id} was cancelled by the buyer.',
-                related_order=order,
-            )
+        # Notify ONLY the farmer(s) for THIS order
+        farmer = order.items.first().product.farmer
+        Notification.objects.create(
+            recipient_type='Farmer', farmer=farmer,
+            notification_type='Status',
+            message=f'Order #{order.id} was cancelled by the buyer.',
+            related_order=order,
+        )
 
         messages.success(request, f'Order #{order.id} cancelled successfully.')
     else:
