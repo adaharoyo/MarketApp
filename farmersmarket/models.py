@@ -199,6 +199,10 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
     related_order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
+    email_sent = models.BooleanField(default=False)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    email_attempts = models.PositiveIntegerField(default=0)
+    email_last_error = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.notification_type} – {self.created_at}"

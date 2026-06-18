@@ -15,7 +15,7 @@ from farmersmarket.views import (
     # OTP & earnings
     farmer_earnings_view, farmer_sales_history_view,
     # notifications
-    mark_notifications_read,
+    mark_notifications_read, notifications_poll, order_status_poll,
     # product management
     add_product_view, edit_product_view, delete_product_view,
     # order actions
@@ -59,6 +59,8 @@ urlpatterns = [
 
     # Notifications
     path('notifications/read/', mark_notifications_read, name='mark_notifications_read'),
+    path('notifications/poll/', notifications_poll, name='notifications_poll'),
+    path('orders/<int:order_id>/status/poll/', order_status_poll, name='order_status_poll'),
 
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),

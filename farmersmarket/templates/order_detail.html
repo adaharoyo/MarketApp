@@ -98,4 +98,30 @@
     {% endif %}
   </div>
 </div>
+{% if user.is_authenticated %}
+<script>
+  (function() {
+    const lastStatus = "{{ order.status|escapejs }}";
+
+    async function pollOrderStatus() {
+      try {
+        const response = await fetch("{% url 'order_status_poll' order.id %}", {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.status && data.status !== lastStatus) {
+          showToast(`Order #{{ order.id }} updated: ${data.status}`, 'info');
+          window.location.reload();
+        }
+      } catch (err) {
+        // Ignore polling failures.
+      }
+    }
+
+    window.setInterval(pollOrderStatus, 7000);
+  })();
+</script>
+{% endif %}
 {% endblock %}

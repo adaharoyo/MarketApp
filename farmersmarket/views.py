@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Sum
 from django.utils import timezone
+from django.http import JsonResponse
 import datetime, random
 
 from django.core.paginator import Paginator
@@ -44,6 +45,17 @@ def _cart_grouped(request):
         except Product.DoesNotExist:
             pass
     return list(farmers_map.values()), grand_total
+
+
+def _queue_notification(recipient_type, notification_type, message, related_order=None, farmer=None, client=None):
+    return Notification.objects.create(
+        recipient_type=recipient_type,
+        farmer=farmer,
+        client=client,
+        notification_type=notification_type,
+        message=message,
+        related_order=related_order,
+    )
 
 
 # ─── HOME ───────────────────────────────────────────────────────────────────
@@ -417,10 +429,24 @@ def checkout_view(request):
                 transaction_id=f'MOCK-{random.randint(10000, 99999)}',
                 is_successful=True
             )
+
+            # Queue a client receipt notification (processed by background email worker)
+            _queue_notification(
+                recipient_type='Client',
+                client=client,
+                notification_type='Payment',
+                message=(
+                    f'Payment receipt for order #{order.id}: '
+                    f'{order.total_amount} via Mobile Money '
+                    f'(Ref: {order.payments.latest("time_paid").transaction_id}).'
+                ),
+                related_order=order,
+            )
             
             # Notify farmer
-            Notification.objects.create(
-                recipient_type='Farmer', farmer=farmer,
+            _queue_notification(
+                recipient_type='Farmer',
+                farmer=farmer,
                 notification_type='Order',
                 message=f'New order #{order.id}: {len(group["items"])} item(s) from {client.name}.',
                 related_order=order,
@@ -500,11 +526,22 @@ def update_order_status(request, order_id):
                 item.product.save()
 
         order.status = new_status
+        if new_status == 'Delivered':
+            order.delivered_at = timezone.now()
         order.save()
-        Notification.objects.create(
-            recipient_type='Client', client=order.client,
+
+        if new_status == 'Ready':
+            status_message = f'Seller is delivering your order #{order.id}. It is now ready for dispatch.'
+        elif new_status == 'Delivered':
+            status_message = f'Your order #{order.id} has been delivered. Enjoy your produce!'
+        else:
+            status_message = f'Your order #{order.id} is now: {new_status}.'
+
+        _queue_notification(
+            recipient_type='Client',
+            client=order.client,
             notification_type='Status',
-            message=f'Your order #{order.id} is now: {new_status}.',
+            message=status_message,
             related_order=order,
         )
         messages.success(request, f'Order #{order.id} → {new_status}.')
@@ -597,6 +634,61 @@ def mark_notifications_read(request):
         except Client.DoesNotExist:
             pass
     return redirect('dashboard')
+
+
+def notifications_poll(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Unauthorized'}, status=401)
+
+    notif_qs = Notification.objects.none()
+    try:
+        farmer = Farmer.objects.get(user=request.user)
+        notif_qs = Notification.objects.filter(farmer=farmer)
+    except Farmer.DoesNotExist:
+        try:
+            client = Client.objects.get(user=request.user)
+            notif_qs = Notification.objects.filter(client=client)
+        except Client.DoesNotExist:
+            pass
+
+    unread_count = notif_qs.filter(is_read=False).count()
+    latest = notif_qs.order_by('-created_at')[:5]
+    payload = []
+    for n in latest:
+        payload.append({
+            'id': n.id,
+            'type': n.notification_type,
+            'message': n.message,
+            'is_read': n.is_read,
+            'created_at': timezone.localtime(n.created_at).isoformat(),
+            'order_id': n.related_order_id,
+        })
+
+    return JsonResponse({
+        'unread_count': unread_count,
+        'notifications': payload,
+    })
+
+
+def order_status_poll(request, order_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Unauthorized'}, status=401)
+
+    order = get_object_or_404(Order, pk=order_id)
+    is_client = (
+        hasattr(request.user, 'client') and
+        order.client.user == request.user
+    )
+    is_farmer = order.items.filter(product__farmer__user=request.user).exists()
+
+    if not (is_client or is_farmer):
+        return JsonResponse({'detail': 'Forbidden'}, status=403)
+
+    return JsonResponse({
+        'order_id': order.id,
+        'status': order.status,
+        'delivered_at': timezone.localtime(order.delivered_at).isoformat() if order.delivered_at else None,
+    })
 
 
 # ─── ADD PRODUCT (FARMER) ─────────────────────────────────────────────────────

@@ -259,9 +259,7 @@
         <div class="bell-wrap">
           <button class="bell-btn" onclick="toggleBell(event)" title="Notifications">
             🔔
-            {% if unread_notif_count %}
-              <span class="bell-count">{{ unread_notif_count }}</span>
-            {% endif %}
+            <span id="bell-count" class="bell-count" {% if not unread_notif_count %}style="display:none;"{% endif %}>{{ unread_notif_count }}</span>
           </button>
           <div class="notif-dropdown" id="notif-dropdown">
             <div class="notif-header">
@@ -271,16 +269,18 @@
                 <button type="submit" style="background:none;border:none;cursor:pointer;color:#888;font-size:.78rem;font-weight:600;">Mark all read</button>
               </form>
             </div>
-            {% if latest_notifs %}
-              {% for n in latest_notifs %}
-                <div class="notif-item">
-                  {% if n.notification_type == 'Order' %}🛒{% elif n.notification_type == 'Status' %}🚚{% else %}💬{% endif %}
-                  {{ n.message }}
-                </div>
-              {% endfor %}
-            {% else %}
-              <div class="notif-empty">No notifications yet</div>
-            {% endif %}
+            <div id="notif-list">
+              {% if latest_notifs %}
+                {% for n in latest_notifs %}
+                  <div class="notif-item">
+                    {% if n.notification_type == 'Order' %}🛒{% elif n.notification_type == 'Status' %}🚚{% elif n.notification_type == 'Payment' %}💳{% else %}💬{% endif %}
+                    {{ n.message }}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="notif-empty">No notifications yet</div>
+              {% endif %}
+            </div>
           </div>
         </div>
       {% endif %}
@@ -342,6 +342,62 @@
     document.addEventListener('click', function() {
       document.getElementById('notif-dropdown')?.classList.remove('open');
     });
+
+    // ── POLLING: NOTIFICATIONS ───────────────────────────────────
+    function notifIcon(type) {
+      if (type === 'Order') return '🛒';
+      if (type === 'Status') return '🚚';
+      if (type === 'Payment') return '💳';
+      return '💬';
+    }
+
+    function renderNotifications(list) {
+      const container = document.getElementById('notif-list');
+      if (!container) return;
+
+      if (!list || !list.length) {
+        container.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(n => (
+        `<div class="notif-item">${notifIcon(n.type)} ${n.message}</div>`
+      )).join('');
+    }
+
+    function updateBellCount(unreadCount) {
+      const bellCount = document.getElementById('bell-count');
+      if (!bellCount) return;
+
+      if (unreadCount > 0) {
+        bellCount.style.display = 'flex';
+        bellCount.textContent = String(unreadCount);
+      } else {
+        bellCount.style.display = 'none';
+      }
+    }
+
+    async function pollNotifications() {
+      try {
+        const response = await fetch('{% url "notifications_poll" %}', {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        updateBellCount(data.unread_count || 0);
+        renderNotifications(data.notifications || []);
+      } catch (err) {
+        // Ignore transient polling errors.
+      }
+    }
+
+    {% if user.is_authenticated %}
+    document.addEventListener('DOMContentLoaded', function() {
+      pollNotifications();
+      window.setInterval(pollNotifications, 8000);
+    });
+    {% endif %}
   </script>
 </body>
 </html>
