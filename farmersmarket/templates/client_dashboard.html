@@ -62,7 +62,7 @@
                 {{ o.status }}
               </span>
             </td>
-            <td style="padding:.8rem 1rem; text-align:right; font-weight:600;">{{ o.total_amount|floatformat:0 }}</td>
+            <td style="padding:.8rem 1rem; text-align:right; font-weight:600;">{{ currency }} {{ o.total_amount|floatformat:0 }}</td>
             <td style="padding:.8rem 1rem; text-align:center;">
               <div style="display:flex; gap:.5rem; justify-content:center; align-items:center;">
                 <a href="{% url 'order_detail' o.id %}" style="color:#510d0a; font-size:.82rem; font-weight:700; text-decoration:none;">View</a>
