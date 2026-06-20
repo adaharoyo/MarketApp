@@ -61,7 +61,12 @@ class Product(models.Model):
         ('other', '📦 Other'),
     ]
 
-    crop_name = models.CharField(max_length=100)
+    crop_name = models.CharField(max_length=100,validators=[
+        RegexValidator(
+            regex=r"^[A-Za-z\s'-]+$",
+            message="Crop name can only contain letters, spaces, hyphens, and apostrophes."
+        )
+    ])
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other', blank=True)
     quantity_available = models.PositiveIntegerField()
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg')
