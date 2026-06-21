@@ -173,6 +173,7 @@ class Order(models.Model):
     courier = models.ForeignKey(Courier, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     delivered_at = models.DateTimeField(null=True, blank=True)
     delivery_confirmed_by_client = models.BooleanField(default=False)
+    payment_confirmed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
 
     def update_status(self, new_status):
