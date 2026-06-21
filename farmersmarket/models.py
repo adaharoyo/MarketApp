@@ -2,6 +2,17 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.validators import RegexValidator
+import uuid
+import random
+import string
+
+def generate_payment_code():
+    return ''.join(
+        random.choices(
+            string.ascii_uppercase + string.digits,
+            k=8
+        )
+    )
 
 
 class Farmer(models.Model):
@@ -157,6 +168,9 @@ class Order(models.Model):
     notes = models.TextField(blank=True, null=True)
     courier = models.ForeignKey(Courier, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     delivered_at = models.DateTimeField(null=True, blank=True)
+    delivery_confirmed_by_client = models.BooleanField(default=False)
+    completed_at = models.DateTimeField( null=True,blank=True)
+
 
     def __str__(self):
         return f"Order #{self.id} – {self.client.name}"
@@ -188,6 +202,15 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment for Order #{self.order.id}"
 
+class Receipt(models.Model):
+    order = models.OneToOneField(Order,on_delete=models.CASCADE,related_name='receipt')
+    receipt_number = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    payment_code = models.CharField( max_length=20, unique=True)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Receipt {self.receipt_number}"
+
 
 class Notification(models.Model):
     RECIPIENT_TYPE = [("Farmer", "Farmer"), ("Client", "Client")]
@@ -196,6 +219,7 @@ class Notification(models.Model):
         ("Payment", "Payment"),
         ("Status", "Order Status Update"),
         ("Product", "Product Availability"),
+        ("Delivery", "Delivery Confirmation")
     ]
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_TYPE)
     farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
