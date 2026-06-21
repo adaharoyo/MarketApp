@@ -5,6 +5,7 @@ from django.core.validators import RegexValidator
 import uuid
 import random
 import string
+from django.utils import timezone
 
 def generate_payment_code():
     return ''.join(
@@ -158,7 +159,9 @@ class Order(models.Model):
         ("Delivered", "Delivered"),
         ("Cancelled", "Cancelled"),
     ]
+
     DELIVERY_TYPE = [("Pickup", "Pickup"), ("Delivery", "Delivery")]
+
     order_date = models.DateTimeField(default=timezone.now)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='orders')
     status = models.CharField(max_length=30, choices=ORDER_STATUS, default="Pending")
@@ -169,12 +172,53 @@ class Order(models.Model):
     courier = models.ForeignKey(Courier, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     delivered_at = models.DateTimeField(null=True, blank=True)
     delivery_confirmed_by_client = models.BooleanField(default=False)
-    completed_at = models.DateTimeField( null=True,blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
 
+    def update_status(self, new_status):
+        flow = [
+            "Pending",
+            "Confirmed",
+            "Preparing",
+            "Ready",
+            "Out for Delivery",
+            "Delivered",
+            "Cancelled"
+        ]
+
+        if new_status not in flow:
+            raise ValueError("Invalid status")
+
+        current_index = flow.index(self.status)
+        new_index = flow.index(new_status)
+
+        # only allow step-by-step movement
+        if new_index != current_index + 1:
+            raise ValueError(f"Invalid transition: {self.status} → {new_status}")
+
+        self.status = new_status
+
+        if new_status == "Delivered":
+            self.delivered_at = timezone.now()
+
+        if new_status == "Cancelled":
+            self.completed_at = timezone.now()
+
+        self.save()
+
+    def confirm_delivery(self, client):
+        if self.client != client:
+            raise ValueError("Not your order")
+
+        if self.status != "Delivered":
+            raise ValueError("Order must be delivered first")
+
+        self.delivery_confirmed_by_client = True
+        self.completed_at = timezone.now()
+
+        self.save()
 
     def __str__(self):
         return f"Order #{self.id} – {self.client.name}"
-
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
