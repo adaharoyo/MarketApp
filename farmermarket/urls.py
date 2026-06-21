@@ -19,7 +19,7 @@ from farmersmarket.views import (
     # product management
     add_product_view, edit_product_view, delete_product_view,
     # order actions
-    cancel_order_view,
+    cancel_order_view,confirm_delivery_view,generate_receipt_view,confirm_payment_view
     # dedicated list views
     farmer_products_view, farmer_orders_view, client_orders_view,
     # admin stubs
@@ -69,6 +69,15 @@ urlpatterns = [
 
     # Order cancellation
     path('orders/<int:order_id>/cancel/', cancel_order_view, name='cancel_order'),
+
+    # Delivery confirmation
+    path('orders/<int:order_id>/confirm-delivery/', confirm_delivery_view, name='confirm_delivery'),
+
+    # Receipt generation
+    path( 'orders/<int:order_id>/generate-receipt/', generate_receipt_view, name='generate_receipt'),
+
+    # Payment confirmation
+    path( 'orders/<int:order_id>/confirm-payment/', confirm_payment_view,name='confirm_payment'),
 
     # Dedicated dashboard lists
     path('dashboard/products/', farmer_products_view, name='farmer_products_list'),
