@@ -14,10 +14,7 @@ def generate_payment_code():
             k=8
         )
     )
- def generate_payment_code():
-    return ''.join(
-        random.choices(string.ascii_uppercase + string.digits, k=8)
-    )   
+ 
 
 
 class Farmer(models.Model):
