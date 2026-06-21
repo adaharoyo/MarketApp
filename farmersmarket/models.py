@@ -242,6 +242,7 @@ class Payment(models.Model):
     time_paid = models.DateTimeField(default=timezone.now)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_OPTIONS)
+    payment_confirmed = models.BooleanField(default=False)
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
     is_successful = models.BooleanField(default=True)
     
