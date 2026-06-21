@@ -86,17 +86,84 @@
     {% if order.delivery_address %}<p style="font-size:.9rem;"><strong>Address:</strong> {{ order.delivery_address }}</p>{% endif %}
     {% if order.notes %}<p style="margin-top:.5rem; font-size:.9rem;"><strong>Notes:</strong> {{ order.notes }}</p>{% endif %}
   </div>
+  
+  {% if order.receipt %}
+<div class="card" style="margin-bottom:1rem; padding:1rem;">
+    <h3>Receipt</h3>
 
-  <div style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Dashboard</a>
-    <a href="{% url 'marketplace' %}" class="btn btn-primary">Shop More</a>
-    {% if order.status == 'Pending' and is_client %}
-      <form method="post" action="{% url 'cancel_order' order.id %}" style="margin:0;">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Cancel Order</button>
-      </form>
+    <p>
+        <strong>Receipt Number:</strong>
+        {{ order.receipt.receipt_number }}
+    </p>
+
+    <p>
+        <strong>Payment Code:</strong>
+        {{ order.receipt.payment_code }}
+    </p>
+
+    <p>
+        <strong>Generated:</strong>
+        {{ order.receipt.generated_at }}
+    </p>
+
+    {% if order.payment_confirmed %}
+    <p style="color:green;">
+        ✓ Payment Confirmed
+    </p>
     {% endif %}
-  </div>
+</div>
+{% endif %}
+
+ <div style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; flex-wrap:wrap;">
+
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+        ← Dashboard
+    </a>
+
+    <a href="{% url 'marketplace' %}" class="btn btn-primary">
+        Shop More
+    </a>
+
+    {% if order.status == 'Pending' and is_client %}
+    <form method="post" action="{% url 'cancel_order' order.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+            Cancel Order
+        </button>
+    </form>
+    {% endif %}
+
+    <!-- CLIENT CONFIRMS DELIVERY -->
+    {% if is_client and order.status == "Delivered" and not order.delivery_confirmed_by_client %}
+    <form method="post" action="{% url 'confirm_delivery' order.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">
+            Confirm Delivery
+        </button>
+    </form>
+    {% endif %}
+
+    <!-- FARMER GENERATES RECEIPT -->
+    {% if is_farmer and order.delivery_confirmed_by_client and not order.receipt %}
+    <form method="post" action="{% url 'generate_receipt' order.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning">
+            Generate Receipt
+        </button>
+    </form>
+    {% endif %}
+
+    <!-- FARMER CONFIRMS PAYMENT -->
+    {% if is_farmer and order.receipt and not order.payment_confirmed %}
+    <form method="post" action="{% url 'confirm_payment' order.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+            Confirm Payment
+        </button>
+    </form>
+    {% endif %}
+
+</div>
 </div>
 {% if user.is_authenticated %}
 <script>
