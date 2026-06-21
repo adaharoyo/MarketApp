@@ -5,5 +5,5 @@ class FarmersmarketConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'farmersmarket'
 
- def ready(self):
+    def ready(self):
         import farmersmarket.signals
