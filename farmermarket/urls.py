@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from farmersmarket import views
 from farmersmarket.views import (
     home, login_view, register_view, logout_view, dashboard_view,farmer_report_view,farmer_report_pdf,
     # marketplace
@@ -36,6 +37,9 @@ urlpatterns = [
     path('marketplace/<int:product_id>/', product_detail_view, name='product_detail'),
     path('marketplace/<int:product_id>/rate/', rate_product, name='rate_product'),
 
+    # Receipt
+    path('receipt/<int:order_id>/', views.receipt_view,name='receipt' ),
+    path('generate-receipt/<int:order_id>/', views.generate_receipt,name='generate_receipt' ),
     # Auth
     path('login/', login_view, name='login'),
     path('register/', register_view, name='register'),

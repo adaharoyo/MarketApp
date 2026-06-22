@@ -14,7 +14,7 @@ from io import BytesIO
 from django.core.paginator import Paginator
 from farmersmarket.models import (
     Farmer, Client, Product, ProductRating,
-    Order, OrderItem, Payment, Notification,
+    Order, OrderItem, Payment, Notification,Receipt,
 )
 from farmersmarket.forms import (
     FarmForm, FarmerForm, ClientForm, ProductForm, PaymentForm, OrderForm,
@@ -433,6 +433,11 @@ def checkout_view(request):
                 is_successful=True
             )
 
+            # Generate customer receipt
+            Receipt.objects.create(
+                order=order
+            )
+
             # Queue a client receipt notification (processed by background email worker)
             _queue_notification(
                 recipient_type='Client',
@@ -531,6 +536,14 @@ def update_order_status(request, order_id):
         order.status = new_status
         if new_status == 'Delivered':
             order.delivered_at = timezone.now()
+        order.save()
+
+         # AUTOMATIC RECEIPT GENERATION
+        if order.delivery_type == "Delivery":
+            Receipt.objects.get_or_create(
+                order=order
+            )
+
         order.save()
 
         if new_status == 'Ready':
@@ -971,3 +984,80 @@ def farmer_report_pdf(request):
 
 
     return response
+
+def receipt_view(request, order_id):
+
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    order = get_object_or_404(
+        Order,
+        id=order_id
+    )
+
+    is_client = (
+        hasattr(request.user, 'client') and
+        order.client.user == request.user
+    )
+
+    is_farmer = order.items.filter(
+        product__farmer__user=request.user
+    ).exists()
+
+    if not (is_client or is_farmer):
+        messages.error(
+            request,
+            "You cannot access this receipt."
+        )
+        return redirect('dashboard')
+
+
+    receipt, created = Receipt.objects.get_or_create(
+        order=order
+    )
+
+
+    return render(
+        request,
+        'receipt.html',
+        {
+            'receipt': receipt,
+            'order': order
+        }
+    )
+
+def generate_receipt(request, order_id):
+
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    order = get_object_or_404(
+        Order,
+        id=order_id
+    )
+
+    farmer = get_object_or_404(
+        Farmer,
+        user=request.user
+    )
+
+    # Check that this farmer owns products in this order
+    if not order.items.filter(product__farmer=farmer).exists():
+        messages.error(request, "You are not allowed to generate this receipt.")
+        return redirect('dashboard')
+
+
+    # Create receipt only if it does not already exist
+    Receipt.objects.get_or_create(
+        order=order
+    )
+
+    messages.success(
+        request,
+        "Receipt generated successfully."
+    )
+
+    return redirect(
+        'receipt',
+        order_id=order.id
+    )

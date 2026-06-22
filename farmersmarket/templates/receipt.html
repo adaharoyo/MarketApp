@@ -1,0 +1,78 @@
+<h2>FARM DIRECT RECEIPT</h2>
+
+<hr>
+
+<p>
+Receipt Number:
+{{ receipt.receipt_number }}
+</p>
+
+<p>
+Date:
+{{ receipt.issued_date }}
+</p>
+
+<h3>Customer</h3>
+
+<p>
+{{ order.client.name }}
+</p>
+
+<p>
+{{ order.client.contact }}
+</p>
+
+
+<h3>Purchased Items</h3>
+
+<table border="1">
+
+<tr>
+<th>Product</th>
+<th>Farmer</th>
+<th>Quantity</th>
+<th>Amount</th>
+</tr>
+
+
+{% for item in order.items.all %}
+
+<tr>
+
+<td>
+{{ item.product.crop_name }}
+</td>
+
+<td>
+{{ item.product.farmer.name }}
+</td>
+
+<td>
+{{ item.quantity }}
+</td>
+
+<td>
+{{ item.price_at_purchase }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+
+<h3>
+Total:
+{{ order.total_amount }} UGX
+</h3>
+
+
+<p>
+Thank you for supporting farmers directly.
+</p>
+
+
+<button onclick="window.print()">
+Print Receipt
+</button>

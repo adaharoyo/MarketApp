@@ -191,7 +191,30 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment for Order #{self.order.id}"
+    
 
+
+class Receipt(models.Model):
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="receipt"
+    )
+    receipt_number = models.CharField(
+        max_length=50,
+        unique=True
+    )
+    issued_date = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.receipt_number:
+            self.receipt_number = f"FD-{random.randint(100000,999999)}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.receipt_number
 
 class Notification(models.Model):
     RECIPIENT_TYPE = [("Farmer", "Farmer"), ("Client", "Client")]

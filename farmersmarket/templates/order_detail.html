@@ -88,15 +88,44 @@
   </div>
 
   <div style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Dashboard</a>
-    <a href="{% url 'marketplace' %}" class="btn btn-primary">Shop More</a>
+
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+        ← Dashboard
+    </a>
+
+    <a href="{% url 'marketplace' %}" class="btn btn-primary">
+        Shop More
+    </a>
+
+
+    <!-- Customer views receipt -->
+    {% if is_client %}
+        {% if order.receipt %}
+            <a href="{% url 'receipt' order.id %}" class="btn btn-primary">
+                🧾 View Receipt
+            </a>
+        {% endif %}
+    {% endif %}
+
+
+    <!-- Farmer manually generates pickup receipt -->
+    {% if is_farmer and order.delivery_type == 'Pickup' and order.status == 'Ready' %}
+        <a href="{% url 'generate_receipt' order.id %}" class="btn btn-primary">
+            🧾 Generate Receipt
+        </a>
+    {% endif %}
+
+
     {% if order.status == 'Pending' and is_client %}
       <form method="post" action="{% url 'cancel_order' order.id %}" style="margin:0;">
         {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Cancel Order</button>
+        <button type="submit" class="btn btn-danger">
+            Cancel Order
+        </button>
       </form>
     {% endif %}
-  </div>
+
+</div>
 </div>
 {% if user.is_authenticated %}
 <script>
