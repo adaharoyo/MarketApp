@@ -182,16 +182,100 @@ class Payment(models.Model):
         ("Mobile Money", "Mobile Money"),
         ("Card", "Card"),
     ]
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
-    time_paid = models.DateTimeField(default=timezone.now)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_OPTIONS)
-    transaction_id = models.CharField(max_length=100, blank=True, null=True)
-    is_successful = models.BooleanField(default=True)
+
+    PAYMENT_STATUS = [
+        ("Pending", "Pending"),
+        ("Confirmed", "Confirmed"),
+        ("Failed", "Failed"),
+    ]
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="payments"
+    )
+
+    # Code generated and sent by farmer to client
+    payment_code = models.CharField(
+        max_length=8,
+        unique=True,
+        default=generate_payment_code
+    )
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_OPTIONS,
+        blank=True,
+        null=True
+    )
+
+    # Mobile money transaction number (optional for cash)
+    transaction_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS,
+        default="Pending"
+    )
+
+    # Message sent by client after payment
+    client_message = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    # Track if client has confirmed payment
+    confirmed_by_client = models.BooleanField(
+        default=False
+    )
+
+    # Prevent old codes being used
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    time_created = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    time_paid = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    confirmation_time = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+
+    def confirm_payment(self):
+        if self.status != "Confirmed":
+            self.status = "Confirmed"
+            self.confirmed_by_client = True
+            self.time_paid = timezone.now()
+            self.confirmation_time = timezone.now()
+            self.save()
+
+
+    def is_expired(self):
+        if self.expires_at:
+            return timezone.now() > self.expires_at
+        return False
+
 
     def __str__(self):
-        return f"Payment for Order #{self.order.id}"
-    
+        return f"{self.payment_code} - Order #{self.order.id}"
 
 
 class Receipt(models.Model):

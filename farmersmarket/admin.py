@@ -29,7 +29,7 @@ class OrderItemAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('order', 'amount', 'payment_method', 'time_paid', 'is_successful')
+    list_display = ('order', 'amount', 'payment_method', 'time_paid', 'status')
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
