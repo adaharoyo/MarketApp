@@ -1180,3 +1180,32 @@ def farmer_new_orders_check(request):
 
     except Farmer.DoesNotExist:
         return JsonResponse({"new_order": False})
+    
+
+import secrets
+
+
+def generate_payment_code(request, order_id):
+
+    order = get_object_or_404(Order, id=order_id)
+
+    # security check
+    if request.user != order.items.first().product.farmer.user:
+        messages.error(request, "Not allowed")
+        return redirect('order_detail', order_id)
+
+
+    code = str(random.randint(100000,999999))
+
+    order.payment_code = code
+    order.save()
+
+    messages.success(
+        request,
+        f"Payment code generated: {code}"
+    )
+
+    return redirect(
+        'order_detail',
+        order_id=order.id
+    )

@@ -4,7 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from farmersmarket import views
 from farmersmarket.views import (
-    home, login_view, register_view, logout_view, dashboard_view,farmer_report_view,farmer_report_pdf,
+    generate_payment_code, home, login_view, register_view, logout_view, dashboard_view,farmer_report_view,farmer_report_pdf,
     # marketplace
     marketplace_view, product_detail_view,
     # ratings
@@ -86,7 +86,12 @@ urlpatterns = [
     views.confirm_received_view,
     name='confirm_received'),
 
-    
+   path(
+    'orders/<int:order_id>/generate-payment-code/',
+    generate_payment_code,
+    name='generate_payment_code'),
+
+
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),
     path('edit_product/<int:product_id>/', edit_product_view, name='edit_product'),

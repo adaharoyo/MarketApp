@@ -106,14 +106,44 @@
     {% endif %}
 
 
-    <!-- Customer confirms product received -->
-    {% if is_client and order.status == 'Delivered' %}
-      <form method="post" action="{% url 'confirm_received' order.id %}" style="margin:0;">
+    
+    <!-- Customer enters farmer payment code -->
+    {% if is_client and order.status == 'Delivered' and not order.payment_confirmed %}
+
+    <div class="card" style="padding:1rem; margin-top:1rem; width:100%;">
+      <h3 style="color:#510d0a; font-size:1rem;">
+        🔐 Confirm Product Receipt & Payment
+      </h3>
+
+      <p style="color:#777; font-size:.85rem;">
+        Enter the payment code given by the farmer after receiving your product.
+      </p>
+
+      <form method="post" action="{% url 'confirm_payment_code' order.id %}">
         {% csrf_token %}
+
+        <input 
+            type="text" 
+            name="code"
+            maxlength="6"
+            placeholder="Enter 6 digit code"
+            required
+            style="
+            padding:.6rem;
+            border:1px solid #ddd;
+            border-radius:8px;
+            margin-right:.5rem;
+            width:180px;
+            "
+        >
+
         <button type="submit" class="btn btn-primary">
-            ✅ Confirm I Received Product
+            Confirm Payment
         </button>
+
       </form>
+  </div>
+
     {% endif %}
 
 
@@ -122,6 +152,18 @@
         <a href="{% url 'generate_receipt' order.id %}" class="btn btn-primary">
             🧾 Generate Receipt
         </a>
+    {% endif %}
+
+    <!-- Farmer generates payment code -->
+    {% if is_farmer and order.status == 'Delivered' and not order.payment_code %}
+
+      <form method="post" action="{% url 'generate_payment_code' order.id %}" style="margin:0;">
+        {% csrf_token %}
+      <button type="submit" class="btn btn-primary">
+        🔐 Generate Customer Payment Code
+      </button>
+      </form>
+
     {% endif %}
 
 
