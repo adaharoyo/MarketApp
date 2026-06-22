@@ -99,12 +99,10 @@
 
 
     <!-- Customer views receipt -->
-    {% if is_client %}
-        {% if order.receipt %}
-            <a href="{% url 'receipt' order.id %}" class="btn btn-primary">
-                🧾 View Receipt
-            </a>
-        {% endif %}
+    {% if is_client and order.status == 'Delivered' %}
+        <a href="{% url 'receipt' order.id %}" class="btn btn-primary">
+            🧾 View Receipt
+          </a>
     {% endif %}
 
 

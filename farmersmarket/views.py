@@ -1012,6 +1012,18 @@ def receipt_view(request, order_id):
         return redirect('dashboard')
 
 
+    # Only allow receipt after delivery
+    if order.status != "Delivered":
+        messages.error(
+            request,
+            "Receipt will only be available after the order is delivered."
+        )
+        return redirect(
+            'order_detail',
+            order_id=order.id
+        )
+
+
     receipt, created = Receipt.objects.get_or_create(
         order=order
     )
