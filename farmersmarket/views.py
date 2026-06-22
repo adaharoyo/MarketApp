@@ -1084,3 +1084,20 @@ def generate_receipt(request, order_id):
         'receipt',
         order_id=order.id
     )
+
+def check_notifications(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"count": 0})
+
+    try:
+        farmer = Farmer.objects.get(user=request.user)
+
+        count = Notification.objects.filter(
+            farmer=farmer,
+            is_read=False
+        ).count()
+
+        return JsonResponse({"count": count})
+
+    except Farmer.DoesNotExist:
+        return JsonResponse({"count": 0})

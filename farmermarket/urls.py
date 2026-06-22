@@ -70,6 +70,7 @@ urlpatterns = [
     # Notifications
     path('notifications/read/', mark_notifications_read, name='mark_notifications_read'),
     path('notifications/poll/', notifications_poll, name='notifications_poll'),
+    path('notifications/check/', views.check_notifications, name='check_notifications'),
     path('orders/<int:order_id>/status/poll/', order_status_poll, name='order_status_poll'),
 
     # Farmer product management
