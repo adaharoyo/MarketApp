@@ -79,7 +79,7 @@ urlpatterns = [
     path(
     'orders/<int:order_id>/status/poll/',
     order_status_poll,
-    name='order_status_poll')
+    name='order_status_poll'),
 
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),
