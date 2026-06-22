@@ -138,68 +138,68 @@
             </td>
             <td style="padding:.8rem 1rem; text-align:right; font-weight:600;">{{ currency }} {{ item.farmer_earnings|floatformat:0 }}</td>
             <td style="padding:.8rem 1rem; text-align:center;">
-              {% if item.order.status == 'Pending' %}
-                <div style="display:flex; gap:.25rem; justify-content:center;">
-                  <form method="post" action="{% url 'update_order_status' item.order.id %}" style="display:inline;">
-                    {% csrf_token %}<input type="hidden" name="status" value="Confirmed">
-                  <button type="submit" class="btn btn-primary btn-sm">Accept & Confirm Order</button>
-                  </form>
-                  <form method="post" action="{% url 'update_order_status' item.order.id %}" style="display:inline;">
-                    {% csrf_token %}<input type="hidden" name="status" value="Cancelled">
-                    <button type="submit" class="btn btn-danger btn-sm">Reject Order</button>
-                  </form>
-                </div>
-              {% elif item.order.status == 'Confirmed' or item.order.status == 'Preparing' %}
 
-
-             {% elif item.order.status == 'Confirmed' %}
+{% if item.order.status == 'Pending' %}
 
 <form method="post" action="{% url 'update_order_status' item.order.id %}">
-    {% csrf_token %}
-    <input type="hidden" name="status" value="Preparing">
+{% csrf_token %}
+<input type="hidden" name="status" value="Confirmed">
+<button type="submit" class="btn btn-primary btn-sm">
+Accept & Confirm Order
+</button>
+</form>
 
-    <button type="submit" class="btn btn-accent btn-sm">
-        Move to Preparation
-    </button>
+
+{% elif item.order.status == 'Confirmed' %}
+
+<form method="post" action="{% url 'update_order_status' item.order.id %}">
+{% csrf_token %}
+<input type="hidden" name="status" value="Preparing">
+<button type="submit" class="btn btn-accent btn-sm">
+Move to Preparation
+</button>
 </form>
 
 
 {% elif item.order.status == 'Preparing' %}
 
 <form method="post" action="{% url 'update_order_status' item.order.id %}">
-    {% csrf_token %}
-    <input type="hidden" name="status" value="Ready">
-
-    <button type="submit" class="btn btn-primary btn-sm">
-        Mark Ready For Delivery
-    </button>
+{% csrf_token %}
+<input type="hidden" name="status" value="Ready">
+<button type="submit" class="btn btn-accent btn-sm">
+Mark Ready
+</button>
 </form>
 
 
 {% elif item.order.status == 'Ready' %}
 
 <form method="post" action="{% url 'update_order_status' item.order.id %}">
-    {% csrf_token %}
-    <input type="hidden" name="status" value="Delivered">
-
-    <button type="submit" class="btn btn-primary btn-sm">
-        Confirm Order Delivered ✓
-    </button>
+{% csrf_token %}
+<input type="hidden" name="status" value="Delivered">
+<button type="submit" class="btn btn-primary btn-sm">
+Confirm Order Delivered ✓
+</button>
 </form>
 
 
 {% elif item.order.status == 'Delivered' %}
 
-<span style="color:green;font-size:.85rem;">
-    ✅ Delivery completed
-</span>
+<a href="{% url 'receipt' item.order.id %}" class="btn btn-secondary btn-sm">
+View Receipt
+</a>
 
 
 {% else %}
 
 <span style="color:#aaa;font-size:.8rem;">
-    No further actions
+No further actions
 </span>
+
+
+{% endif %}
+
+</td>
 
 
 
