@@ -1228,6 +1228,5 @@ def send_payment_details(request, order_id):
 
 
     return redirect(
-        'order_detail',
-        order_id=order.id
+        'dashboard'
     )
