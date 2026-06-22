@@ -1209,3 +1209,79 @@ def generate_payment_code(request, order_id):
         'order_detail',
         order_id=order.id
     )
+
+
+@require_POST
+def confirm_payment_code(request, order_id):
+
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    client = get_object_or_404(Client, user=request.user)
+
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        client=client
+    )
+
+    entered_code = request.POST.get('code')
+
+    # Check if farmer has generated a code
+    if not order.payment_code:
+        messages.error(
+            request,
+            "The farmer has not generated a payment code yet."
+        )
+        return redirect(
+            'order_detail',
+            order_id=order.id
+        )
+
+    # Validate code
+    if entered_code != order.payment_code:
+        messages.error(
+            request,
+            "Invalid payment code."
+        )
+        return redirect(
+            'order_detail',
+            order_id=order.id
+        )
+
+
+    # Mark payment confirmed
+    payment = order.payments.last()
+
+    if payment:
+        payment.confirmed_by_client = True
+        payment.status = "Confirmed"
+        payment.save()
+
+
+    # Notify farmer
+    farmer = order.items.first().product.farmer
+
+    _queue_notification(
+        recipient_type='Farmer',
+        farmer=farmer,
+        notification_type='Payment',
+        message=f'{client.name} confirmed payment for order #{order.id}.',
+        related_order=order,
+    )
+
+
+    # Remove used code
+    order.payment_code = None
+    order.save()
+
+
+    messages.success(
+        request,
+        "Payment confirmed successfully."
+    )
+
+    return redirect(
+        'order_detail',
+        order_id=order.id
+    )

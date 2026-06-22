@@ -92,6 +92,13 @@ urlpatterns = [
     name='generate_payment_code'),
 
 
+
+
+    path(
+        'orders/<int:order_id>/confirm-payment/', views.confirm_payment_code, name='confirm_payment_code'),
+
+
+
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),
     path('edit_product/<int:product_id>/', edit_product_view, name='edit_product'),
