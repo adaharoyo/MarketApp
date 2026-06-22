@@ -2,7 +2,35 @@
 
 {% block content %}
 
+<style>
+@media print {
+    .no-print {
+        display: none;
+    }
+
+    body {
+        font-size: 12pt;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 8px;
+        border: 1px solid black;
+    }
+}
+</style>
+
 <div class="container">
+
+<div class="no-print mb-3">
+    <button onclick="window.print()" class="btn btn-primary">
+        Print Report
+    </button>
+</div>
 
 <h1>Farmer Sales Report</h1>
 
@@ -11,12 +39,10 @@ Farmer:
 <strong>{{ farmer.name }}</strong>
 </p>
 
-
 <h2>
 Total Earnings:
-{{ total_earnings }}
+UGX {{ total_earnings }}
 </h2>
-
 
 <table border="1" width="100%">
 
@@ -29,56 +55,26 @@ Total Earnings:
 <th>Amount</th>
 </tr>
 
-
 {% for sale in sales %}
 
 <tr>
-
-<td>
-#{{ sale.order.id }}
-</td>
-
-
-<td>
-{{ sale.order.client.name }}
-</td>
-
-
-<td>
-{{ sale.product.crop_name }}
-</td>
-
-
-<td>
-{{ sale.quantity }}
-</td>
-
-
-<td>
-{{ sale.order.order_date }}
-</td>
-
-
-<td>
-{{ sale.subtotal }}
-</td>
-
+<td>#{{ sale.order.id }}</td>
+<td>{{ sale.order.client.name }}</td>
+<td>{{ sale.product.crop_name }}</td>
+<td>{{ sale.quantity }}</td>
+<td>{{ sale.order.order_date }}</td>
+<td>{{ sale.subtotal }}</td>
 </tr>
-
 
 {% empty %}
 
 <tr>
-<td colspan="6">
-No sales found
-</td>
+<td colspan="6">No sales found</td>
 </tr>
 
 {% endfor %}
 
-
 </table>
-
 
 </div>
 
