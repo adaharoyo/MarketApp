@@ -1096,36 +1096,32 @@ def check_notifications(request):
         return JsonResponse({"count": 0})
     
 
-def check_new_orders(request):
+def farmer_new_orders_check(request):
     if not request.user.is_authenticated:
-        return JsonResponse({"new": False})
+        return JsonResponse({"new_order": False})
 
     try:
         farmer = Farmer.objects.get(user=request.user)
     except Farmer.DoesNotExist:
-        return JsonResponse({"new": False})
+        return JsonResponse({"new_order": False})
 
+    last_check = request.session.get("last_order_check")
 
-    last_order_time = request.GET.get('last_order')
+    latest_order = (
+        Order.objects.filter(items__product__farmer=farmer)
+        .distinct()
+        .order_by("-order_date")
+        .first()
+    )
 
-    orders = Order.objects.filter(
-        items__product__farmer=farmer
-    ).distinct().order_by('-order_date')
+    if not latest_order:
+        return JsonResponse({"new_order": False})
 
+    latest_time = latest_order.order_date.timestamp()
 
-    if not orders.exists():
-        return JsonResponse({"new": False})
+    if last_check and latest_time <= last_check:
+        return JsonResponse({"new_order": False})
 
+    request.session["last_order_check"] = latest_time
 
-    latest_order = orders.first()
-
-
-    if last_order_time:
-        if str(latest_order.order_date.timestamp()) > last_order_time:
-            return JsonResponse({
-                "new": True,
-                "order_id": latest_order.id
-            })
-
-
-    return JsonResponse({"new": False})    
+    return JsonResponse({"new_order": True})
