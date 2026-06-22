@@ -795,6 +795,59 @@ def cancel_order_view(request, order_id):
 
     return redirect('dashboard')
 
+@require_POST
+def confirm_received_view(request, order_id):
+
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    client = get_object_or_404(Client, user=request.user)
+
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        client=client
+    )
+
+    # Only allow confirmation after farmer marked delivered
+    if order.status != "Delivered":
+        messages.error(
+            request,
+            "You can only confirm after receiving the product."
+        )
+        return redirect('order_detail', order_id=order.id)
+
+
+    # Get the farmer who owns this order
+    farmer = order.items.first().product.farmer
+
+
+    # Send notification to farmer
+    _queue_notification(
+        recipient_type='Farmer',
+        farmer=farmer,
+        notification_type='Status',
+        message=f'{client.name} has confirmed receiving order #{order.id}.',
+        related_order=order,
+    )
+
+
+    # Generate receipt
+    Receipt.objects.get_or_create(
+        order=order
+    )
+
+
+    messages.success(
+        request,
+        "Thank you for confirming your delivery."
+    )
+
+    return redirect(
+        'order_detail',
+        order_id=order.id
+    )
+
 
 # ─── ADMIN CRUD STUBS ─────────────────────────────────────────────────────────
 def _simple_form_view(request, FormClass, title):

@@ -106,6 +106,17 @@
     {% endif %}
 
 
+    <!-- Customer confirms product received -->
+    {% if is_client and order.status == 'Delivered' %}
+      <form method="post" action="{% url 'confirm_received' order.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+            ✅ Confirm I Received Product
+        </button>
+      </form>
+    {% endif %}
+
+
     <!-- Farmer manually generates pickup receipt -->
     {% if is_farmer and order.delivery_type == 'Pickup' and order.status == 'Ready' %}
         <a href="{% url 'generate_receipt' order.id %}" class="btn btn-primary">

@@ -81,6 +81,12 @@ urlpatterns = [
     order_status_poll,
     name='order_status_poll'),
 
+    path(
+    'orders/<int:order_id>/confirm-received/',
+    views.confirm_received_view,
+    name='confirm_received'),
+
+    
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),
     path('edit_product/<int:product_id>/', edit_product_view, name='edit_product'),
