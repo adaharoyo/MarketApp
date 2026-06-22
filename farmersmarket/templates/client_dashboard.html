@@ -56,10 +56,12 @@
             <td style="padding:.8rem 1rem; color:#888; font-size:.82rem;">{{ o.order_date|date:"M j, Y" }}</td>
             <td style="padding:.8rem 1rem;">{{ o.delivery_type }}</td>
             <td style="padding:.8rem 1rem;">
-              <span style="padding:.2rem .7rem; border-radius:10px; font-size:.78rem; font-weight:700;
-                background:{% if o.status == 'Delivered' %}#c8e6c9{% elif o.status == 'Cancelled' %}#ffcdd2{% elif o.status == 'Pending' %}#fdf3d0{% else %}#e3f2fd{% endif %};
-                color:{% if o.status == 'Delivered' %}#2e7d32{% elif o.status == 'Cancelled' %}#c62828{% elif o.status == 'Pending' %}#a29f15{% else %}#1565c0{% endif %};">
-                {{ o.status }}
+              <span
+              id="status-{{ o.id }}"
+              style="padding:.2rem .7rem; border-radius:10px; font-size:.78rem; font-weight:700;
+              background:{% if o.status == 'Delivered' %}#c8e6c9{% elif o.status == 'Cancelled' %}#ffcdd2{% elif o.status == 'Pending' %}#fdf3d0{% else %}#e3f2fd{% endif %};
+              color:{% if o.status == 'Delivered' %}#2e7d32{% elif o.status == 'Cancelled' %}#c62828{% elif o.status == 'Pending' %}#a29f15{% else %}#1565c0{% endif %};">
+              {{ o.status }}
               </span>
             </td>
             <td style="padding:.8rem 1rem; text-align:right; font-weight:600;">{{ currency }} {{ o.total_amount|floatformat:0 }}</td>
@@ -139,4 +141,42 @@
   <p style="color:#888; margin-bottom:3rem;">No products available.</p>
   {% endif %}
 </div>
+
+<script>
+let previousStatuses = {};
+
+function checkOrderStatus(orderId) {
+
+    fetch(`/orders/${orderId}/status/poll/`)
+    .then(response => response.json())
+    .then(data => {
+
+        const statusElement =
+            document.getElementById(`status-${orderId}`);
+
+        if (statusElement) {
+
+            if (
+                previousStatuses[orderId] &&
+                previousStatuses[orderId] !== data.status
+            ) {
+                alert(
+                    `Order #${orderId} status changed to ${data.status}`
+                );
+            }
+
+            previousStatuses[orderId] = data.status;
+            statusElement.innerText = data.status;
+        }
+    });
+}
+
+setInterval(() => {
+
+    {% for o in orders %}
+        checkOrderStatus({{ o.id }});
+    {% endfor %}
+
+}, 5000);
+</script>
 {% endblock %}
