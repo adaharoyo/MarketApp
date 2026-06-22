@@ -1,11 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.core.validators import RegexValidator
-import uuid
 import random
 import string
-from django.utils import timezone
 
 def generate_payment_code():
     return ''.join(
@@ -14,7 +11,6 @@ def generate_payment_code():
             k=8
         )
     )
- 
 
 
 class Farmer(models.Model):
@@ -75,12 +71,7 @@ class Product(models.Model):
         ('other', '📦 Other'),
     ]
 
-    crop_name = models.CharField(max_length=100,validators=[
-        RegexValidator(
-            regex=r"^[A-Za-z\s'-]+$",
-            message="Crop name can only contain letters, spaces, hyphens, and apostrophes."
-        )
-    ])
+    crop_name = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other', blank=True)
     quantity_available = models.PositiveIntegerField()
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg')
@@ -156,18 +147,11 @@ class Order(models.Model):
         ("Confirmed", "Confirmed"),
         ("Preparing", "Preparing"),
         ("Ready", "Ready for Pickup/Delivery"),
-        ("Paid", "Paid"),
         ("Out for Delivery", "Out for Delivery"),
         ("Delivered", "Delivered"),
-        ("Completed", "Completed"),
         ("Cancelled", "Cancelled"),
     ]
-
-    DELIVERY_TYPE = [
-        ("Pickup", "Pickup"),
-        ("Delivery", "Delivery"),
-    ]
-   
+    DELIVERY_TYPE = [("Pickup", "Pickup"), ("Delivery", "Delivery")]
     order_date = models.DateTimeField(default=timezone.now)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='orders')
     status = models.CharField(max_length=30, choices=ORDER_STATUS, default="Pending")
@@ -177,59 +161,10 @@ class Order(models.Model):
     notes = models.TextField(blank=True, null=True)
     courier = models.ForeignKey(Courier, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     delivered_at = models.DateTimeField(null=True, blank=True)
-    delivery_confirmed_by_client = models.BooleanField(default=False)
- 
-    completed_at = models.DateTimeField(null=True, blank=True)
-    payment_confirmed = models.BooleanField(default=False)
-
-    def update_status(self, new_status):
-       
-        flow = [
-                "Pending",
-                "Confirmed",
-                "Preparing",
-                "Ready",
-                "Paid",
-                "Out for Delivery",
-                "Delivered",
-                "Completed",
-                "Cancelled",
-            ]
-
-        if new_status not in flow:
-            raise ValueError("Invalid status")
-
-        current_index = flow.index(self.status)
-        new_index = flow.index(new_status)
-
-        # only allow step-by-step movement
-        if new_index != current_index + 1:
-            raise ValueError(f"Invalid transition: {self.status} → {new_status}")
-
-        self.status = new_status
-
-        if new_status == "Delivered":
-            self.delivered_at = timezone.now()
-
-        if new_status == "Cancelled":
-            self.completed_at = timezone.now()
-
-        self.save()
-
-    def confirm_delivery(self, client):
-        if self.client != client:
-            raise ValueError("Not your order")
-
-        if self.status != "Delivered":
-            raise ValueError("Order must be delivered first")
-
-        self.delivery_confirmed_by_client = True
-        self.completed_at = timezone.now()
-
-        self.save()
 
     def __str__(self):
         return f"Order #{self.id} – {self.client.name}"
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
@@ -251,23 +186,11 @@ class Payment(models.Model):
     time_paid = models.DateTimeField(default=timezone.now)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_OPTIONS)
-    
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
     is_successful = models.BooleanField(default=True)
-    
-   
 
     def __str__(self):
         return f"Payment for Order #{self.order.id}"
-
-class Receipt(models.Model):
-    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='receipt')
-    receipt_number = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    payment_code = models.CharField(max_length=20, unique=True, default=generate_payment_code)
-    generated_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Receipt {self.receipt_number}"
 
 
 class Notification(models.Model):
@@ -277,7 +200,6 @@ class Notification(models.Model):
         ("Payment", "Payment"),
         ("Status", "Order Status Update"),
         ("Product", "Product Availability"),
-        ("Delivery", "Delivery Confirmation")
     ]
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_TYPE)
     farmer = models.ForeignKey(Farmer, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')

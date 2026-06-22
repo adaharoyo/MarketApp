@@ -5,13 +5,13 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Sum
 from django.utils import timezone
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 import datetime, random
 
 from django.core.paginator import Paginator
 from farmersmarket.models import (
     Farmer, Client, Product, ProductRating,
-    Order, OrderItem, Payment, Notification,Receipt
+    Order, OrderItem, Payment, Notification,
 )
 from farmersmarket.forms import (
     FarmForm, FarmerForm, ClientForm, ProductForm, PaymentForm, OrderForm,
@@ -740,131 +740,6 @@ def delete_product_view(request, product_id):
     product.delete()
     messages.success(request, f'{name} has been deleted.')
     return redirect('dashboard')
-
-#client confirms delivery
-
-@require_POST
-def confirm_delivery_view(request, order_id):
-    client = get_object_or_404(Client, user=request.user)
-    order = get_object_or_404(Order, id=order_id, client=client)
-
-    if order.status != "Delivered":
-        messages.error(request, "Order has not been delivered yet.")
-        return redirect("order_detail", order_id=order.id)
-
-    order.delivery_confirmed_by_client = True
-    order.save()
-
-    farmer = order.items.first().product.farmer
-
-    Notification.objects.create(
-        recipient_type="Farmer",
-        farmer=farmer,
-        notification_type="Delivery",
-        message=f"Client confirmed delivery for Order #{order.id}",
-        related_order=order
-    )
-
-    messages.success(request, "Delivery confirmed successfully.")
-    return redirect("order_detail", order_id=order.id)
-
-#receipt generation
-@require_POST
-def generate_receipt_view(request, order_id):
-    farmer = get_object_or_404(Farmer, user=request.user)
-    order = get_object_or_404(Order, id=order_id)
-
-    if not order.items.filter(product__farmer=farmer).exists():
-        messages.error(request, "Access denied.")
-        return redirect("dashboard")
-
-    if not order.delivery_confirmed_by_client:
-        messages.error(request, "Client has not confirmed delivery.")
-        return redirect("order_detail", order_id=order.id)
-
-    receipt, created = Receipt.objects.get_or_create(
-        order=order
-    )
-
-    Notification.objects.create(
-        recipient_type="Client",
-        client=order.client,
-        notification_type="Payment",
-        message=f"Your payment code is {receipt.payment_code}",
-        related_order=order
-    )
-
-    messages.success(
-        request,
-        f"Receipt generated successfully. Payment code: {receipt.payment_code}"
-    )
-
-    return redirect("order_detail", order_id=order.id)
-
-#confirm payment
-@require_POST
-def confirm_payment_view(request, order_id):
-    farmer = get_object_or_404(Farmer, user=request.user)
-    order = get_object_or_404(Order, id=order_id)
-
-    if not order.items.filter(product__farmer=farmer).exists():
-        messages.error(request, "Access denied.")
-        return redirect("dashboard")
-
-    order.payment_confirmed = True
-    order.status = "Completed"
-    order.completed_at = timezone.now()
-    order.save()
-
-    Notification.objects.create(
-        recipient_type="Client",
-        client=order.client,
-        notification_type="Payment",
-        message=f"Payment for Order #{order.id} has been confirmed.",
-        related_order=order
-    )
-
-    messages.success(request, "Payment confirmed successfully.")
-    return redirect("order_detail", order_id=order.id)
-
-# report generation
-def generate_report_view(request, order_id):
-    farmer = get_object_or_404(Farmer, user=request.user)
-    order = get_object_or_404(Order, id=order_id)
-
-    if not order.items.filter(product__farmer=farmer).exists():
-        messages.error(request, "Access denied.")
-        return redirect("dashboard")
-
-    if not order.payment_confirmed:
-        messages.error(request, "Payment has not been confirmed.")
-        return redirect("order_detail", order_id=order.id)
-
-    report = f"""
-ORDER REPORT
-============
-
-Order ID: {order.id}
-Client: {order.client.name}
-Status: {order.status}
-Payment Confirmed: Yes
-Total Amount: {order.total_amount}
-
-Products:
-"""
-
-    for item in order.items.all():
-        report += (
-            f"- {item.product.crop_name} "
-            f"({item.quantity} x {item.price_at_purchase})\n"
-        )
-
-    response = HttpResponse(report, content_type="text/plain")
-    response["Content-Disposition"] = (
-        f'attachment; filename="order_report_{order.id}.txt"'
-    )
-
-    return response
 
 # ─── CANCEL ORDER (CLIENT) ────────────────────────────────────────────────────
 @require_POST
