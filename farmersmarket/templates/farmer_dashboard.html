@@ -152,45 +152,60 @@
               {% elif item.order.status == 'Confirmed' or item.order.status == 'Preparing' %}
 
 
-              {% if item.order.status == 'Confirmed' %}
+             {% elif item.order.status == 'Confirmed' %}
 
-                <form method="post" action="{% url 'update_order_status' item.order.id %}">
-                    {% csrf_token %}
-                   <input type="hidden" name="status" value="Preparing">
+<form method="post" action="{% url 'update_order_status' item.order.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="status" value="Preparing">
 
-                <button type="submit" class="btn btn-accent btn-sm">
-                   Move to Preparation
-                </button>
-                    </form>
-
-              {% endif %}
+    <button type="submit" class="btn btn-accent btn-sm">
+        Move to Preparation
+    </button>
+</form>
 
 
+{% elif item.order.status == 'Preparing' %}
 
-              {% if not item.order.payment_details_sent %}
+<form method="post" action="{% url 'update_order_status' item.order.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="status" value="Ready">
 
-                <form method="post" action="{% url 'send_payment_details' item.order.id %}">
-                   {% csrf_token %}
+    <button type="submit" class="btn btn-primary btn-sm">
+        Mark Ready For Delivery
+    </button>
+</form>
 
-                <textarea 
-                  name="payment_details"
-                  placeholder="Enter payment details (Mobile Money number, bank, instructions)"
-                  style="width:100%;margin-top:10px;padding:8px;">
-                </textarea>
 
-                  <button type="submit" class="btn btn-primary btn-sm">
-                      💳 Send Payment Details To Customer
-                  </button>
+{% elif item.order.status == 'Ready' %}
 
-                </form>
+<form method="post" action="{% url 'update_order_status' item.order.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="status" value="Delivered">
 
-              {% else %}
+    <button type="submit" class="btn btn-primary btn-sm">
+        Confirm Order Delivered ✓
+    </button>
+</form>
 
-        <span style="color:green;font-size:.85rem;">
-            ✅ Payment details sent to customer
-        </span>
 
-    {% endif %}
+{% elif item.order.status == 'Delivered' %}
+
+<span style="color:green;font-size:.85rem;">
+    ✅ Delivery completed
+</span>
+
+
+{% else %}
+
+<span style="color:#aaa;font-size:.8rem;">
+    No further actions
+</span>
+
+{% endif %}
+
+
+
+             
               {% elif item.order.status == 'Ready' %}
                 <form method="post" action="{% url 'update_order_status' item.order.id %}" style="display:inline;">
                   {% csrf_token %}<input type="hidden" name="status" value="Delivered">

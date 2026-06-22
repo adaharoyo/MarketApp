@@ -86,11 +86,7 @@ urlpatterns = [
     views.confirm_received_view,
     name='confirm_received'),
 
-   path(
-    'orders/<int:order_id>/send-payment-details/',
-    views.send_payment_details,
-    name='send_payment_details'),
-
+   
 
 
 
