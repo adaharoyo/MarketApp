@@ -76,6 +76,11 @@ urlpatterns = [
 
     path( 'farmer/new-orders-check/',views.farmer_new_orders_check,name='farmer_new_orders_check' ),
 
+    path(
+    'orders/<int:order_id>/status/poll/',
+    order_status_poll,
+    name='order_status_poll')
+
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),
     path('edit_product/<int:product_id>/', edit_product_view, name='edit_product'),
