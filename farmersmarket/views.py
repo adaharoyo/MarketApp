@@ -1102,26 +1102,28 @@ def farmer_new_orders_check(request):
 
     try:
         farmer = Farmer.objects.get(user=request.user)
+
+        latest_order = (
+            Order.objects
+            .filter(items__product__farmer=farmer)
+            .order_by('-order_date')
+            .first()
+        )
+
+        if not latest_order:
+            return JsonResponse({"new_order": False})
+
+        last_seen = request.session.get('last_seen_order_id')
+
+        if last_seen is None:
+            request.session['last_seen_order_id'] = latest_order.id
+            return JsonResponse({"new_order": False})
+
+        if latest_order.id > last_seen:
+            request.session['last_seen_order_id'] = latest_order.id
+            return JsonResponse({"new_order": True})
+
+        return JsonResponse({"new_order": False})
+
     except Farmer.DoesNotExist:
         return JsonResponse({"new_order": False})
-
-    last_check = request.session.get("last_order_check")
-
-    latest_order = (
-        Order.objects.filter(items__product__farmer=farmer)
-        .distinct()
-        .order_by("-order_date")
-        .first()
-    )
-
-    if not latest_order:
-        return JsonResponse({"new_order": False})
-
-    latest_time = latest_order.order_date.timestamp()
-
-    if last_check and latest_time <= last_check:
-        return JsonResponse({"new_order": False})
-
-    request.session["last_order_check"] = latest_time
-
-    return JsonResponse({"new_order": True})

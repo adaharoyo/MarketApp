@@ -72,7 +72,9 @@ urlpatterns = [
     path('notifications/read/', mark_notifications_read, name='mark_notifications_read'),
     path('notifications/poll/', notifications_poll, name='notifications_poll'),
     path('notifications/check/', views.check_notifications, name='check_notifications'),
-    path('orders/<int:order_id>/status/poll/', order_status_poll, name='order_status_poll'),
+    
+
+    path( 'farmer/new-orders-check/',views.farmer_new_orders_check,name='farmer_new_orders_check' ),
 
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),
