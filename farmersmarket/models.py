@@ -151,20 +151,23 @@ class Courier(models.Model):
 
 
 class Order(models.Model):
-   ORDER_STATUS = [
-    ("Pending", "Pending"),
-    ("Confirmed", "Confirmed"),
-    ("Preparing", "Preparing"),
-    ("Ready", "Ready for Pickup/Delivery"),
-    ("Paid", "Paid"),
-    ("Out for Delivery", "Out for Delivery"),
-    ("Delivered", "Delivered"),
-    ("Completed", "Completed"),
-    ("Cancelled", "Cancelled"),
-    ]   
+    ORDER_STATUS = [
+        ("Pending", "Pending"),
+        ("Confirmed", "Confirmed"),
+        ("Preparing", "Preparing"),
+        ("Ready", "Ready for Pickup/Delivery"),
+        ("Paid", "Paid"),
+        ("Out for Delivery", "Out for Delivery"),
+        ("Delivered", "Delivered"),
+        ("Completed", "Completed"),
+        ("Cancelled", "Cancelled"),
+    ]
 
-    DELIVERY_TYPE = [("Pickup", "Pickup"), ("Delivery", "Delivery")]
-
+    DELIVERY_TYPE = [
+        ("Pickup", "Pickup"),
+        ("Delivery", "Delivery"),
+    ]
+   
     order_date = models.DateTimeField(default=timezone.now)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='orders')
     status = models.CharField(max_length=30, choices=ORDER_STATUS, default="Pending")
