@@ -231,7 +231,7 @@ def client_orders_view(request):
     paginator = Paginator(orders_qs, 15)
     page = request.GET.get('page')
     orders = paginator.get_page(page)
-    return render(request, 'farmersmarket/client_orders_list.html', {
+    return render(request, 'client_orders_list.html', {
         'client': client, 'orders': orders, 'is_paginated': orders.has_other_pages()
     })
 
