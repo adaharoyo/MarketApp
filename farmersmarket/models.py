@@ -195,11 +195,11 @@ class Payment(models.Model):
         related_name="payments"
     )
 
-    # Code generated and sent by farmer to client
+    # Code farmer sends to client
     payment_code = models.CharField(
         max_length=8,
         unique=True,
-        default=generate_payment_code
+        blank=True
     )
 
     amount = models.DecimalField(
@@ -214,7 +214,7 @@ class Payment(models.Model):
         null=True
     )
 
-    # Mobile money transaction number (optional for cash)
+    # Used for mobile money reference number
     transaction_id = models.CharField(
         max_length=100,
         blank=True,
@@ -227,18 +227,18 @@ class Payment(models.Model):
         default="Pending"
     )
 
-    # Message sent by client after payment
+    # Message from client after payment
     client_message = models.TextField(
         blank=True,
         null=True
     )
 
-    # Track if client has confirmed payment
+    # Tracks client confirmation
     confirmed_by_client = models.BooleanField(
         default=False
     )
 
-    # Prevent old codes being used
+    # Payment code expiry
     expires_at = models.DateTimeField(
         null=True,
         blank=True
@@ -259,7 +259,24 @@ class Payment(models.Model):
     )
 
 
+    def save(self, *args, **kwargs):
+        # Generate unique payment code automatically
+        if not self.payment_code:
+            code = generate_payment_code()
+
+            while Payment.objects.filter(payment_code=code).exists():
+                code = generate_payment_code()
+
+            self.payment_code = code
+
+        super().save(*args, **kwargs)
+
+
     def confirm_payment(self):
+        """
+        Called when client confirms they have paid
+        """
+
         if self.status != "Confirmed":
             self.status = "Confirmed"
             self.confirmed_by_client = True
@@ -269,14 +286,18 @@ class Payment(models.Model):
 
 
     def is_expired(self):
+        """
+        Checks if payment code has expired
+        """
+
         if self.expires_at:
             return timezone.now() > self.expires_at
+
         return False
 
 
     def __str__(self):
         return f"{self.payment_code} - Order #{self.order.id}"
-
 
 class Receipt(models.Model):
     order = models.OneToOneField(
