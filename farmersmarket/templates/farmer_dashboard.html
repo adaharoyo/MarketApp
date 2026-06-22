@@ -178,4 +178,25 @@
     {% endif %}
   </div>
 </div>
+<script>
+let lastUnread = {{ notifications|length }};
+
+setInterval(() => {
+    fetch("{% url 'notifications_poll' %}")
+        .then(response => response.json())
+        .then(data => {
+
+            if (data.unread_count > lastUnread) {
+
+                alert("🔔 New order received!");
+
+                location.reload();
+            }
+
+            lastUnread = data.unread_count;
+        })
+        .catch(error => console.error(error));
+
+}, 5000);
+</script>
 {% endblock %}
