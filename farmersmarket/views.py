@@ -375,11 +375,13 @@ def update_cart(request, product_id):
     return redirect('cart')
 
 
+
 # ─── CHECKOUT ─────────────────────────────────────────────────────────────────
 def checkout_view(request):
     if not request.user.is_authenticated:
         messages.error(request, 'Please login to checkout.')
         return redirect('login')
+        
     try:
         client = Client.objects.get(user=request.user)
     except Client.DoesNotExist:
@@ -407,30 +409,37 @@ def checkout_view(request):
             
             # Create separate order for this farmer
             order = Order.objects.create(
-                client=client, delivery_type=delivery_type,
+                client=client, 
+                delivery_type=delivery_type,
                 delivery_address=delivery_address,
-                total_amount=farmer_total, notes=notes, status='Pending',
+                total_amount=farmer_total, 
+                notes=notes, 
+                status='Pending',
             )
             order_ids.append(order.id)
             
             for item in group['items']:
                 product = item['product']
                 OrderItem.objects.create(
-                    order=order, product=product,
-                    quantity=item['qty'], price_at_purchase=product.price,
+                    order=order, 
+                    product=product,
+                    quantity=item['qty'], 
+                    price_at_purchase=product.price,
                 )
                 product.quantity_available -= item['qty']
                 if product.quantity_available <= 0:
                     product.is_available = False
                 product.save()
             
-            # Create mock payment for this order
+            # Create mock payment for this order using correct model attributes
             Payment.objects.create(
                 order=order,
                 amount=farmer_total,
-                payment_method='Mobile Money', # Mock default
+                payment_method='Mobile Money',
                 transaction_id=f'MOCK-{random.randint(10000, 99999)}',
-                is_successful=True
+                status='Confirmed',
+                confirmed_by_client=True,
+                time_paid=timezone.now()  # Crucial so latest("time_paid") works below
             )
 
             # Generate customer receipt
@@ -462,13 +471,15 @@ def checkout_view(request):
 
         _save_cart(request, {})
         messages.success(request, f'{len(order_ids)} order(s) placed and paid via Mock Payment!')
-        # Redirect to first order (can update to show all orders)
+        
+        # Redirect to first order
         return redirect('order_detail', order_id=order_ids[0] if order_ids else 1)
 
     return render(request, 'checkout.html', {
-        'farmers_data': farmers_data, 'total': total, 'client': client,
+        'farmers_data': farmers_data, 
+        'total': total, 
+        'client': client,
     })
-
 
 # ─── ORDER DETAIL ─────────────────────────────────────────────────────────────
 def order_detail_view(request, order_id):
