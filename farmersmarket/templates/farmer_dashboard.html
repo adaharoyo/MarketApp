@@ -101,4 +101,96 @@
   </div>
 
   <div class="card" style="padding:0; overflow:hidden; margin-bottom:3rem;">
-    <div style="padding:.9rem 1.5rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; display:flex; justify-content:space-
+    <div style="padding:.9rem 1.5rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="color:#510d0a; font-size:1rem;">Incoming Orders (Latest)</h2>
+      <a href="{% url 'farmer_orders_list' %}" style="color:#510d0a; font-size:.82rem; font-weight:700; text-decoration:none;">View All Orders →</a>
+    </div>
+    {% if orders_with_earnings %}
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:.88rem;">
+        <thead>
+          <tr style="background:#bbd8b3;">
+            <th style="padding:.8rem 1.25rem; text-align:left;">Order</th>
+            <th style="padding:.8rem 1rem; text-align:left;">Client</th>
+            <th style="padding:.8rem 1rem; text-align:left;">Date</th>
+            <th style="padding:.8rem 1rem; text-align:left;">Current Status</th>
+            <th style="padding:.8rem 1rem; text-align:right;">Your Earnings</th>
+            <th style="padding:.8rem 1rem; text-align:center;">Action / Next Step</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in orders_with_earnings %}
+          <tr style="border-bottom:1px solid #f0f0f0; vertical-align:middle;">
+            <td style="padding:.8rem 1.25rem; white-space:nowrap;">
+              <a href="{% url 'order_detail' item.order.id %}" style="color:#510d0a; font-weight:700; text-decoration:none;">#{{ item.order.id }}</a>
+            </td>
+            <td style="padding:.8rem 1rem; white-space:nowrap;">{{ item.order.client.name }}</td>
+            <td style="padding:.8rem 1rem; color:#888; font-size:.8rem; white-space:nowrap;">{{ item.order.order_date|date:"M j, Y" }}</td>
+            <td style="padding:.8rem 1rem; white-space:nowrap;">
+              <span style="padding:.2rem .7rem; border-radius:10px; font-size:.78rem; font-weight:700; display:inline-block;
+                background:{% if item.order.status == 'Delivered' %}#c8e6c9{% elif item.order.status == 'Cancelled' %}#ffcdd2{% elif item.order.status == 'Pending' %}#fdf3d0{% else %}#e3f2fd{% endif %};
+                color:{% if item.order.status == 'Delivered' %}#2e7d32{% elif item.order.status == 'Cancelled' %}#c62828{% elif item.order.status == 'Pending' %}#a29f15{% else %}#1565c0{% endif %};">
+                {{ item.order.status }}
+              </span>
+            </td>
+            <td style="padding:.8rem 1rem; text-align:right; font-weight:600; white-space:nowrap;">{{ currency }} {{ item.farmer_earnings|floatformat:0 }}</td>
+            
+            <td style="padding:.8rem 1rem; text-align:center; white-space:nowrap;">
+              {% if item.order.status == 'Pending' %}
+                <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="Confirmed">
+                  <button type="submit" class="btn btn-primary btn-sm">Accept & Confirm Order</button>
+                </form>
+
+              {% elif item.order.status == 'Confirmed' %}
+                <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="Preparing">
+                  <button type="submit" class="btn btn-accent btn-sm">Move to Preparation</button>
+                </form>
+
+              {% elif item.order.status == 'Preparing' %}
+                <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="Ready">
+                  <button type="submit" class="btn btn-accent btn-sm">Mark Ready</button>
+                </form>
+
+              {% elif item.order.status == 'Ready' %}
+                <form method="post" action="{% url 'update_order_status' item.order.id %}" style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="Delivered">
+                  <button type="submit" class="btn btn-primary btn-sm">Confirm Order Delivered ✓</button>
+                </form>
+
+              {% elif item.order.status == 'Delivered' %}
+                <a href="{% url 'receipt' item.order.id %}" class="btn btn-secondary btn-sm">View Receipt</a>
+
+              {% else %}
+                <span style="color:#aaa; font-size:.8rem;">No further actions</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding:3rem; text-align:center; color:#888;">No orders yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+setInterval(() => {
+    fetch("{% url 'farmer_new_orders_check' %}")
+    .then(response => response.json())
+    .then(data => {
+        if (data.new_order) {
+            location.reload();
+        }
+    });
+}, 5000);
+</script>
+{% endblock %}
