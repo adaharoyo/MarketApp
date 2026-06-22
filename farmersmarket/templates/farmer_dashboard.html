@@ -8,8 +8,17 @@
       <p style="color:#888; font-size:.88rem; margin-top:.2rem;">Manage products and incoming orders.</p>
     </div>
     <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
-      <a href="{% url 'farmer_earnings' %}" class="btn btn-secondary">📊 Earnings</a>
-      <a href="{% url 'add_product' %}" class="btn btn-primary">＋ Add Product</a>
+      <a href="{% url 'farmer_earnings' %}" class="btn btn-secondary">
+        📊 Earnings
+      </a>
+
+      <a href="{% url 'farmer_report' %}" class="btn btn-accent">
+        📄 Generate Report
+      </a>
+
+      <a href="{% url 'add_product' %}" class="btn btn-primary">
+         ＋ Add Product
+      </a>
     </div>
   </div>
 

@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container">
+
+<h1>Farmer Sales Report</h1>
+
+<p>
+Farmer:
+<strong>{{ farmer.name }}</strong>
+</p>
+
+
+<h2>
+Total Earnings:
+{{ total_earnings }}
+</h2>
+
+
+<table border="1" width="100%">
+
+<tr>
+<th>Order</th>
+<th>Customer</th>
+<th>Product</th>
+<th>Quantity</th>
+<th>Date</th>
+<th>Amount</th>
+</tr>
+
+
+{% for sale in sales %}
+
+<tr>
+
+<td>
+#{{ sale.order.id }}
+</td>
+
+
+<td>
+{{ sale.order.client.name }}
+</td>
+
+
+<td>
+{{ sale.product.crop_name }}
+</td>
+
+
+<td>
+{{ sale.quantity }}
+</td>
+
+
+<td>
+{{ sale.order.order_date }}
+</td>
+
+
+<td>
+{{ sale.subtotal }}
+</td>
+
+</tr>
+
+
+{% empty %}
+
+<tr>
+<td colspan="6">
+No sales found
+</td>
+</tr>
+
+{% endfor %}
+
+
+</table>
+
+
+</div>
+
+{% endblock %}

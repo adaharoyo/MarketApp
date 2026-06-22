@@ -3,7 +3,7 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from farmersmarket.views import (
-    home, login_view, register_view, logout_view, dashboard_view,
+    home, login_view, register_view, logout_view, dashboard_view,farmer_report_view,farmer_report_pdf,
     # marketplace
     marketplace_view, product_detail_view,
     # ratings
@@ -45,6 +45,12 @@ urlpatterns = [
     path('dashboard/', dashboard_view, name='dashboard'),
     path('earnings/', farmer_earnings_view, name='farmer_earnings'),
     path('earnings/sales/', farmer_sales_history_view, name='farmer_sales_list'),
+
+    # Farmer reports
+
+    # Farmer reports
+    path('farmer/report/', farmer_report_view, name='farmer_report'),
+    path('farmer/report/pdf/', farmer_report_pdf, name='farmer_report_pdf'),
 
     # Cart
     path('cart/', cart_view, name='cart'),

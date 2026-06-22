@@ -7,6 +7,9 @@ from django.db.models import Q, Sum
 from django.utils import timezone
 from django.http import JsonResponse
 import datetime, random
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
 from django.core.paginator import Paginator
 from farmersmarket.models import (
@@ -789,3 +792,182 @@ def add_order_view(request):   return _simple_form_view(request, OrderForm, 'Add
 def add_farmer_view(request):  return _simple_form_view(request, FarmerForm, 'Add Farmer')
 def add_payment_view(request): return _simple_form_view(request, PaymentForm, 'Add Payment')
 def add_client_view(request):  return _simple_form_view(request, ClientForm, 'Add Client')
+
+# ─── FARMER REPORT ─────────────────────────────────────────────
+
+def farmer_report_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    farmer = get_object_or_404(Farmer, user=request.user)
+
+    orders = Order.objects.filter(
+        items__product__farmer=farmer
+    ).distinct().order_by('-order_date')
+
+
+    delivered_orders = orders.filter(status="Delivered")
+
+    total_earnings = 0
+    sales = []   # <-- ADD THIS
+
+
+    for order in delivered_orders:
+
+        farmer_items = order.items.filter(
+            product__farmer=farmer
+        )
+
+        for item in farmer_items:
+
+            subtotal = item.price_at_purchase * item.quantity
+
+            total_earnings += subtotal
+
+            sales.append({
+                'order': order,
+                'product': item.product,
+                'quantity': item.quantity,
+                'subtotal': subtotal,
+            })
+
+
+    customers = Client.objects.filter(
+        orders__items__product__farmer=farmer
+    ).distinct()
+
+
+    return render(request, 'farmersmarket/farmer_report.html', {
+        'farmer': farmer,
+        'sales': sales,   # <-- ADD THIS
+        'total_earnings': total_earnings,
+        'customers': customers,
+        'customer_count': customers.count(),
+    })
+
+
+def farmer_report_pdf(request):
+
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    farmer = get_object_or_404(Farmer, user=request.user)
+
+    orders = Order.objects.filter(
+        items__product__farmer=farmer
+    ).distinct()
+
+
+    delivered_orders = orders.filter(status="Delivered")
+
+    earnings = 0
+
+    for order in delivered_orders:
+
+        items = order.items.filter(
+            product__farmer=farmer
+        )
+
+        earnings += sum(
+            item.price_at_purchase * item.quantity
+            for item in items
+        )
+
+
+    buffer = BytesIO()
+
+    pdf = canvas.Canvas(buffer)
+
+
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(
+        50,
+        800,
+        "Farmer Sales Report"
+    )
+
+
+    pdf.setFont("Helvetica", 12)
+
+    pdf.drawString(
+        50,
+        770,
+        f"Farmer: {farmer.name}"
+    )
+
+    pdf.drawString(
+        50,
+        750,
+        f"Total Orders: {orders.count()}"
+    )
+
+    pdf.drawString(
+        50,
+        730,
+        f"Delivered Orders: {delivered_orders.count()}"
+    )
+
+    pdf.drawString(
+        50,
+        710,
+        f"Total Earnings: {earnings}"
+    )
+
+
+    y = 670
+
+    pdf.setFont("Helvetica-Bold", 12)
+
+    pdf.drawString(50,y,"Order ID")
+    pdf.drawString(130,y,"Customer")
+    pdf.drawString(250,y,"Status")
+
+
+    y -= 20
+
+    pdf.setFont("Helvetica",10)
+
+
+    for order in orders:
+
+        pdf.drawString(
+            50,
+            y,
+            str(order.id)
+        )
+
+        pdf.drawString(
+            130,
+            y,
+            order.client.name[:15]
+        )
+
+        pdf.drawString(
+            250,
+            y,
+            order.status
+        )
+
+        y -= 20
+
+        if y < 50:
+            pdf.showPage()
+            y = 800
+
+
+    pdf.save()
+
+
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer,
+        content_type='application/pdf'
+    )
+
+    response['Content-Disposition'] = (
+        'attachment; filename="farmer_report.pdf"'
+    )
+
+
+    return response
