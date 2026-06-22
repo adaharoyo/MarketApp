@@ -66,6 +66,7 @@ urlpatterns = [
     path('checkout/', checkout_view, name='checkout'),
     path('orders/<int:order_id>/', order_detail_view, name='order_detail'),
     path('orders/<int:order_id>/status/', update_order_status, name='update_order_status'),
+    
 
     # Notifications
     path('notifications/read/', mark_notifications_read, name='mark_notifications_read'),

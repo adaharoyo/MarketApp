@@ -179,24 +179,22 @@
   </div>
 </div>
 <script>
-let lastUnread = {{ notifications|length }};
 
 setInterval(() => {
-    fetch("{% url 'notifications_poll' %}")
-        .then(response => response.json())
-        .then(data => {
 
-            if (data.unread_count > lastUnread) {
+    fetch("{% url 'farmer_new_orders_check' %}")
 
-                alert("🔔 New order received!");
+    .then(response => response.json())
 
-                location.reload();
-            }
+    .then(data => {
 
-            lastUnread = data.unread_count;
-        })
-        .catch(error => console.error(error));
+        if (data.new_order) {
+            location.reload();
+        }
+
+    });
 
 }, 5000);
+
 </script>
 {% endblock %}

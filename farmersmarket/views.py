@@ -460,14 +460,7 @@ def checkout_view(request):
                 related_order=order,
             )
             
-            # Notify farmer
-            _queue_notification(
-                recipient_type='Farmer',
-                farmer=farmer,
-                notification_type='Order',
-                message=f'New order #{order.id}: {len(group["items"])} item(s) from {client.name}.',
-                related_order=order,
-            )
+            
 
         _save_cart(request, {})
         messages.success(request, f'{len(order_ids)} order(s) placed and paid via Mock Payment!')
@@ -1101,3 +1094,38 @@ def check_notifications(request):
 
     except Farmer.DoesNotExist:
         return JsonResponse({"count": 0})
+    
+
+def check_new_orders(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"new": False})
+
+    try:
+        farmer = Farmer.objects.get(user=request.user)
+    except Farmer.DoesNotExist:
+        return JsonResponse({"new": False})
+
+
+    last_order_time = request.GET.get('last_order')
+
+    orders = Order.objects.filter(
+        items__product__farmer=farmer
+    ).distinct().order_by('-order_date')
+
+
+    if not orders.exists():
+        return JsonResponse({"new": False})
+
+
+    latest_order = orders.first()
+
+
+    if last_order_time:
+        if str(latest_order.order_date.timestamp()) > last_order_time:
+            return JsonResponse({
+                "new": True,
+                "order_id": latest_order.id
+            })
+
+
+    return JsonResponse({"new": False})    
