@@ -1,3 +1,5 @@
+import re
+from django import forms
 from django.forms import ModelForm
 from farmersmarket.models import (
     Farm, Farmer, Client, Product, Order, OrderItem, Payment, Notification
@@ -31,8 +33,18 @@ class ProductForm(ModelForm):
             'harvest_date', 'description', 'image', 'is_available',
         ]
         widgets = {
-            'harvest_date': __import__('django').forms.DateInput(attrs={'type': 'date'}),
+            'harvest_date': forms.DateInput(attrs={'type': 'date'}),
         }
+
+    def clean_crop_name(self):
+        crop_name = self.cleaned_data['crop_name'].strip()
+
+        if not re.match(r'^[A-Za-z\s]+$', crop_name):
+            raise forms.ValidationError(
+                "Product name should contain letters only."
+            )
+
+        return crop_name
 
 
 class OrderForm(ModelForm):
