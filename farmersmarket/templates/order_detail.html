@@ -163,6 +163,15 @@
     </form>
     {% endif %}
 
+    {% if is_farmer and order.payment_confirmed %}
+    <form method="get"action="{% url 'generate_report' order.id %}"style="margin:0;">
+      {% csrf_token %}
+    <button type="submit" class="btn btn-success">
+        Generate Report
+    </button>
+    </form>
+    {% endif %}
+
 </div>
 </div>
 {% if user.is_authenticated %}

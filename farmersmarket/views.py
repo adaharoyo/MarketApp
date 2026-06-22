@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Sum
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 import datetime, random
 
 from django.core.paginator import Paginator
@@ -812,6 +812,7 @@ def confirm_payment_view(request, order_id):
         return redirect("dashboard")
 
     order.payment_confirmed = True
+    order.status = "Completed"
     order.completed_at = timezone.now()
     order.save()
 
@@ -825,6 +826,45 @@ def confirm_payment_view(request, order_id):
 
     messages.success(request, "Payment confirmed successfully.")
     return redirect("order_detail", order_id=order.id)
+
+# report generation
+def generate_report_view(request, order_id):
+    farmer = get_object_or_404(Farmer, user=request.user)
+    order = get_object_or_404(Order, id=order_id)
+
+    if not order.items.filter(product__farmer=farmer).exists():
+        messages.error(request, "Access denied.")
+        return redirect("dashboard")
+
+    if not order.payment_confirmed:
+        messages.error(request, "Payment has not been confirmed.")
+        return redirect("order_detail", order_id=order.id)
+
+    report = f"""
+ORDER REPORT
+============
+
+Order ID: {order.id}
+Client: {order.client.name}
+Status: {order.status}
+Payment Confirmed: Yes
+Total Amount: {order.total_amount}
+
+Products:
+"""
+
+    for item in order.items.all():
+        report += (
+            f"- {item.product.crop_name} "
+            f"({item.quantity} x {item.price_at_purchase})\n"
+        )
+
+    response = HttpResponse(report, content_type="text/plain")
+    response["Content-Disposition"] = (
+        f'attachment; filename="order_report_{order.id}.txt"'
+    )
+
+    return response
 
 # ─── CANCEL ORDER (CLIENT) ────────────────────────────────────────────────────
 @require_POST

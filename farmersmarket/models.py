@@ -151,15 +151,17 @@ class Courier(models.Model):
 
 
 class Order(models.Model):
-    ORDER_STATUS = [
-        ("Pending", "Pending"),
-        ("Confirmed", "Confirmed"),
-        ("Preparing", "Preparing"),
-        ("Ready", "Ready for Pickup/Delivery"),
-        ("Out for Delivery", "Out for Delivery"),
-        ("Delivered", "Delivered"),
-        ("Cancelled", "Cancelled"),
-    ]
+   ORDER_STATUS = [
+    ("Pending", "Pending"),
+    ("Confirmed", "Confirmed"),
+    ("Preparing", "Preparing"),
+    ("Ready", "Ready for Pickup/Delivery"),
+    ("Paid", "Paid"),
+    ("Out for Delivery", "Out for Delivery"),
+    ("Delivered", "Delivered"),
+    ("Completed", "Completed"),
+    ("Cancelled", "Cancelled"),
+    ]   
 
     DELIVERY_TYPE = [("Pickup", "Pickup"), ("Delivery", "Delivery")]
 
@@ -178,15 +180,18 @@ class Order(models.Model):
     payment_confirmed = models.BooleanField(default=False)
 
     def update_status(self, new_status):
+       
         flow = [
-            "Pending",
-            "Confirmed",
-            "Preparing",
-            "Ready",
-            "Out for Delivery",
-            "Delivered",
-            "Cancelled"
-        ]
+                "Pending",
+                "Confirmed",
+                "Preparing",
+                "Ready",
+                "Paid",
+                "Out for Delivery",
+                "Delivered",
+                "Completed",
+                "Cancelled",
+            ]
 
         if new_status not in flow:
             raise ValueError("Invalid status")
