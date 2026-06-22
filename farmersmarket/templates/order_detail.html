@@ -110,41 +110,64 @@
     <!-- Customer enters farmer payment code -->
     {% if is_client and order.status == 'Delivered' and not order.payment_confirmed %}
 
-    <div class="card" style="padding:1rem; margin-top:1rem; width:100%;">
-      <h3 style="color:#510d0a; font-size:1rem;">
-        🔐 Confirm Product Receipt & Payment
-      </h3>
+   
+    {% if is_client %}
 
-      <p style="color:#777; font-size:.85rem;">
-        Enter the payment code given by the farmer after receiving your product.
-      </p>
+{% if order.payment_details and not order.customer_received %}
 
-      <form method="post" action="{% url 'confirm_payment_code' order.id %}">
-        {% csrf_token %}
+<div class="card" style="padding:1rem; margin-top:1rem;">
 
-        <input 
-            type="text" 
-            name="code"
-            maxlength="6"
-            placeholder="Enter 6 digit code"
-            required
-            style="
-            padding:.6rem;
-            border:1px solid #ddd;
-            border-radius:8px;
-            margin-right:.5rem;
-            width:180px;
-            "
-        >
+    <h3 style="color:#510d0a;">
+        💳 Payment Details From Farmer
+    </h3>
 
-        <button type="submit" class="btn btn-primary">
-            Confirm Payment
-        </button>
+    <p style="white-space:pre-line;">
+        {{ order.payment_details }}
+    </p>
 
-      </form>
-  </div>
+    <p style="color:#777;">
+        Send payment using the details above. After receiving your order, confirm below.
+    </p>
 
-    {% endif %}
+</div>
+
+{% endif %}
+
+
+{% if order.status == "Delivered" and not order.customer_received %}
+
+<div class="card" style="padding:1rem; margin-top:1rem;">
+
+<h3>
+📦 Confirm You Received Your Order
+</h3>
+
+
+<form method="post" action="{% url 'confirm_received' order.id %}">
+
+{% csrf_token %}
+
+
+<textarea 
+name="message"
+placeholder="Message to farmer (example: I have received my order)"
+required
+style="width:100%; padding:.7rem;">
+</textarea>
+
+
+<button class="btn btn-primary" type="submit">
+Confirm Received
+</button>
+
+
+</form>
+
+</div>
+
+{% endif %}
+
+{% endif %}
 
 
     <!-- Farmer manually generates pickup receipt -->
