@@ -1,230 +1,442 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<div class="container" style="max-width:720px; margin-top:2rem; margin-bottom:4rem;">
 
-  <!-- Header -->
-  <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1.75rem; flex-wrap:wrap; gap:1rem;">
+<div class="container" style="max-width:720px;margin:2rem auto 4rem;">
+
+
+<!-- HEADER -->
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+
     <div>
-      <h1 style="color:#510d0a;">Order #{{ order.id }}</h1>
-      <p style="color:#888; font-size:.88rem; margin-top:.25rem;">{{ order.order_date|date:"F j, Y · H:i" }}</p>
-    </div>
-    <span style="padding:.4rem 1.1rem; border-radius:20px; font-weight:700; font-size:.88rem;
-      background:{% if order.status == 'Delivered' %}#c8e6c9{% elif order.status == 'Cancelled' %}#ffcdd2{% elif order.status == 'Pending' %}#fdf3d0{% else %}#e3f2fd{% endif %};
-      color:{% if order.status == 'Delivered' %}#2e7d32{% elif order.status == 'Cancelled' %}#c62828{% elif order.status == 'Pending' %}#a29f15{% else %}#1565c0{% endif %};">
-      {{ order.status }}
-    </span>
-  </div>
+        <h1 style="color:#510d0a;">
+            Order #{{ order.id }}
+        </h1>
 
-  <!-- Progress Tracker -->
-  {% with statuses="Pending,Confirmed,Preparing,Ready,Delivered" %}
-  <div class="card" style="margin-bottom:1.5rem; padding:1.5rem;">
-    <div style="display:flex; align-items:center; position:relative;">
-      {% for s in statuses.split %}
-        {% with active=order.status %}
-        <div style="display:flex; flex-direction:column; align-items:center; flex:1; position:relative; z-index:1;">
-          <div style="width:28px; height:28px; border-radius:50%; border:2.5px solid
-            {% if s == active %}#510d0a{% elif forloop.counter < statuses.split|length %}#bbd8b3{% else %}#ddd{% endif %};
-            background:{% if s == active %}#510d0a{% elif s == 'Cancelled' and active == 'Cancelled' %}#c62828{% else %}#fff{% endif %};
-            display:flex; align-items:center; justify-content:center; font-size:.7rem; color:#fff; font-weight:700;
-            transition:all .3s;">
-            {% if s == active %}●{% else %}○{% endif %}
-          </div>
-          <p style="font-size:.67rem; color:{% if s == active %}#510d0a{% else %}#aaa{% endif %}; font-weight:{% if s == active %}700{% else %}400{% endif %}; margin-top:.35rem; text-align:center;">{{ s }}</p>
-        </div>
-        {% if not forloop.last %}
-          <div style="flex:1; height:2px; background:#e0e0e0; position:relative; margin-bottom:1.3rem;"></div>
-        {% endif %}
-        {% endwith %}
-      {% endfor %}
+        <p style="color:#888;">
+            {{ order.order_date|date:"F j, Y · H:i" }}
+        </p>
     </div>
-  </div>
-  {% endwith %}
 
-  <!-- Delivery Success Message (shown when Delivered) -->
-  {% if order.status == 'Delivered' %}
-    <div style="background:#e8f5e9; border-radius:12px; padding:1rem 1.25rem; margin-bottom:1.5rem; text-align:center;">
-      <p style="color:#2e7d32; font-weight:700;">✅ Delivered — Thank you for your order!</p>
-    </div>
-  {% endif %}
 
-  <!-- Items -->
-  <div class="card" style="padding:0; overflow:hidden; margin-bottom:1.5rem;">
-    <div style="padding:.85rem 1.25rem; background:#fdf3d0; border-bottom:1px solid #f0e8c4; font-weight:700; color:#510d0a; font-size:.92rem;">Items</div>
-    {% if is_farmer and not is_client %}
-      {% for item in farmer_items %}
-      <div style="padding:.9rem 1.25rem; display:flex; justify-content:space-between; border-bottom:1px solid #f7f7f7; align-items:center;">
-        <div>
-          <strong style="font-size:.92rem;">{{ item.product.crop_name }}</strong>
-          <span style="color:#888; font-size:.82rem;"> × {{ item.quantity }} {{ item.product.get_unit_display }}</span>
-          <br><span style="color:#aaa; font-size:.78rem;">by {{ item.product.farmer.name }}</span>
-        </div>
-        <span style="font-weight:600; color:#191102;">{{ item.product.currency }} {{ item.price_at_purchase|floatformat:0 }}</span>
-      </div>
-      {% endfor %}
+    <span style="
+    padding:.4rem 1rem;
+    border-radius:20px;
+    font-weight:bold;
+    background:
+    {% if order.status == 'Delivered' %}
+        #c8e6c9;
+    {% elif order.status == 'Cancelled' %}
+        #ffcdd2;
     {% else %}
-      {% for item in order.items.all %}
-      <div style="padding:.9rem 1.25rem; display:flex; justify-content:space-between; border-bottom:1px solid #f7f7f7; align-items:center;">
-        <div>
-          <strong style="font-size:.92rem;">{{ item.product.crop_name }}</strong>
-          <span style="color:#888; font-size:.82rem;"> × {{ item.quantity }} {{ item.product.get_unit_display }}</span>
-          <br><span style="color:#aaa; font-size:.78rem;">by {{ item.product.farmer.name }}</span>
-        </div>
-        <span style="font-weight:600; color:#191102;">{{ item.product.currency }} {{ item.price_at_purchase|floatformat:0 }}</span>
-      </div>
-      {% endfor %}
+        #e3f2fd;
     {% endif %}
-    <div style="padding:.9rem 1.25rem; display:flex; justify-content:space-between; font-weight:700; font-size:1.05rem; background:#faf9f6;">
-      <span>Total</span>
-      <span style="color:#510d0a;">{{ order.total_amount|floatformat:0 }}</span>
-    </div>
-  </div>
+    ">
 
-  <!-- Delivery info -->
-  <div class="card" style="margin-bottom:1.5rem; padding:1.25rem;">
-    <h3 style="color:#510d0a; margin-bottom:.75rem; font-size:.95rem;">Delivery Info</h3>
-    <p style="font-size:.9rem;"><strong>Type:</strong> {{ order.delivery_type }}</p>
-    {% if order.delivery_address %}<p style="font-size:.9rem;"><strong>Address:</strong> {{ order.delivery_address }}</p>{% endif %}
-    {% if order.notes %}<p style="margin-top:.5rem; font-size:.9rem;"><strong>Notes:</strong> {{ order.notes }}</p>{% endif %}
-  </div>
+        {{ order.status }}
 
-  <div style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
-
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-        ← Dashboard
-    </a>
-
-    <a href="{% url 'marketplace' %}" class="btn btn-primary">
-        Shop More
-    </a>
-
-
-    <!-- Customer views receipt -->
-    {% if is_client and order.status == 'Delivered' %}
-        <a href="{% url 'receipt' order.id %}" class="btn btn-primary">
-            🧾 View Receipt
-          </a>
-    {% endif %}
-
-
-    
-    <!-- Customer enters farmer payment code -->
-    {% if is_client and order.status == 'Delivered' and not order.payment_confirmed %}
-
-   
-    {% if is_client %}
-
-{% if order.payment_details and not order.customer_received %}
-
-<div class="card" style="padding:1rem; margin-top:1rem;">
-
-    <h3 style="color:#510d0a;">
-        💳 Payment Details From Farmer
-    </h3>
-
-    <p style="white-space:pre-line;">
-        {{ order.payment_details }}
-    </p>
-
-    <p style="color:#777;">
-        Send payment using the details above. After receiving your order, confirm below.
-    </p>
+    </span>
 
 </div>
+
+
+
+
+<!-- ORDER ITEMS -->
+
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:1.5rem;">
+
+
+<div style="
+padding:1rem;
+background:#fdf3d0;
+font-weight:bold;
+color:#510d0a;">
+Items
+</div>
+
+
+
+{% if is_farmer and not is_client %}
+
+
+{% for item in farmer_items %}
+
+<div style="
+padding:1rem;
+display:flex;
+justify-content:space-between;
+border-bottom:1px solid #eee;">
+
+
+<div>
+
+<strong>
+{{ item.product.crop_name }}
+</strong>
+
+
+<br>
+
+<span style="color:#777;">
+Qty:
+{{ item.quantity }}
+{{ item.product.unit }}
+</span>
+
+
+</div>
+
+
+
+<div>
+
+{{ item.product.currency }}
+{{ item.price_at_purchase|floatformat:0 }}
+
+</div>
+
+
+</div>
+
+
+{% endfor %}
+
+
+
+{% else %}
+
+
+
+{% for item in order.items.all %}
+
+
+<div style="
+padding:1rem;
+display:flex;
+justify-content:space-between;
+border-bottom:1px solid #eee;">
+
+
+<div>
+
+<strong>
+{{ item.product.crop_name }}
+</strong>
+
+
+<br>
+
+<span style="color:#777;">
+Qty:
+{{ item.quantity }}
+{{ item.product.unit }}
+</span>
+
+
+<br>
+
+<small>
+Farmer:
+{{ item.product.farmer.name }}
+</small>
+
+
+</div>
+
+
+<div>
+
+{{ item.product.currency }}
+{{ item.price_at_purchase|floatformat:0 }}
+
+</div>
+
+
+</div>
+
+
+{% endfor %}
+
 
 {% endif %}
 
 
-{% if order.status == "Delivered" and not order.customer_received %}
 
-<div class="card" style="padding:1rem; margin-top:1rem;">
+<div style="
+padding:1rem;
+display:flex;
+justify-content:space-between;
+font-weight:bold;">
 
-<h3>
-📦 Confirm You Received Your Order
+<span>
+Total
+</span>
+
+
+<span style="color:#510d0a;">
+{{ order.total_amount|floatformat:0 }}
+</span>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<!-- DELIVERY INFO -->
+
+
+<div class="card" style="padding:1rem;margin-bottom:1.5rem;">
+
+
+<h3 style="color:#510d0a;">
+Delivery Information
 </h3>
 
 
-<form method="post" action="{% url 'confirm_received' order.id %}">
+<p>
+<strong>Type:</strong>
+{{ order.delivery_type }}
+</p>
+
+
+{% if order.delivery_address %}
+
+<p>
+<strong>Address:</strong>
+{{ order.delivery_address }}
+</p>
+
+{% endif %}
+
+
+
+{% if order.notes %}
+
+<p>
+<strong>Notes:</strong>
+{{ order.notes }}
+</p>
+
+{% endif %}
+
+
+</div>
+
+
+
+
+
+
+
+<!-- ACTIONS -->
+
+
+<div style="display:flex;gap:.7rem;flex-wrap:wrap;">
+
+
+
+<a href="{% url 'dashboard' %}" 
+class="btn btn-secondary">
+
+← Dashboard
+
+</a>
+
+
+
+<a href="{% url 'marketplace' %}" 
+class="btn btn-primary">
+
+Shop More
+
+</a>
+
+
+
+
+
+<!-- RECEIPT -->
+
+
+{% if order.status == "Delivered" %}
+
+
+<a href="{% url 'receipt' order.id %}" 
+class="btn btn-primary">
+
+🧾 View Receipt
+
+</a>
+
+
+{% endif %}
+
+
+
+
+
+
+
+
+<!-- CLIENT CONFIRM DELIVERY -->
+
+
+{% if is_client and order.status == "Delivered" %}
+
+
+<form method="post"
+action="{% url 'confirm_received' order.id %}">
+
 
 {% csrf_token %}
 
 
-<textarea 
-name="message"
-placeholder="Message to farmer (example: I have received my order)"
-required
-style="width:100%; padding:.7rem;">
-</textarea>
+<button class="btn btn-primary"
+type="submit">
 
+📦 Confirm Received
 
-<button class="btn btn-primary" type="submit">
-Confirm Received
 </button>
 
 
 </form>
 
-</div>
 
 {% endif %}
 
+
+
+
+
+
+
+
+<!-- FARMER RECEIPT -->
+
+
+{% if is_farmer and order.delivery_type == "Pickup" and order.status == "Ready" %}
+
+
+
+<a href="{% url 'generate_receipt' order.id %}"
+class="btn btn-primary">
+
+🧾 Generate Receipt
+
+</a>
+
+
+
 {% endif %}
 
 
-    <!-- Farmer manually generates pickup receipt -->
-    {% if is_farmer and order.delivery_type == 'Pickup' and order.status == 'Ready' %}
-        <a href="{% url 'generate_receipt' order.id %}" class="btn btn-primary">
-            🧾 Generate Receipt
-        </a>
-    {% endif %}
-
-    <!-- Farmer generates payment code -->
-    {% if is_farmer and order.status == 'Delivered' and not order.payment_code %}
-
-      <form method="post" action="{% url 'generate_payment_code' order.id %}" style="margin:0;">
-        {% csrf_token %}
-      <button type="submit" class="btn btn-primary">
-        🔐 Generate Customer Payment Code
-      </button>
-      </form>
-
-    {% endif %}
 
 
-    {% if order.status == 'Pending' and is_client %}
-      <form method="post" action="{% url 'cancel_order' order.id %}" style="margin:0;">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">
-            Cancel Order
-        </button>
-      </form>
-    {% endif %}
+
+
+
+
+<!-- CANCEL ORDER -->
+
+
+{% if is_client and order.status == "Pending" %}
+
+
+<form method="post"
+action="{% url 'cancel_order' order.id %}">
+
+
+{% csrf_token %}
+
+
+<button class="btn btn-danger">
+
+Cancel Order
+
+</button>
+
+
+</form>
+
+
+
+{% endif %}
+
+
+
+
 
 </div>
+
+
+
+
+
+
 </div>
+
+
+
+
+
+
 {% if user.is_authenticated %}
+
 <script>
-  (function() {
-    const lastStatus = "{{ order.status|escapejs }}";
 
-    async function pollOrderStatus() {
-      try {
-        const response = await fetch("{% url 'order_status_poll' order.id %}", {
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-          credentials: 'same-origin',
-        });
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data.status && data.status !== lastStatus) {
-          showToast(`Order #{{ order.id }} updated: ${data.status}`, 'info');
-          window.location.reload();
-        }
-      } catch (err) {
-        // Ignore polling failures.
-      }
-    }
 
-    window.setInterval(pollOrderStatus, 7000);
-  })();
+(function(){
+
+
+let currentStatus="{{order.status}}";
+
+
+
+function checkStatus(){
+
+
+fetch("{% url 'order_status_poll' order.id %}")
+
+.then(response=>response.json())
+
+.then(data=>{
+
+
+if(data.status && data.status !== currentStatus){
+
+location.reload();
+
+}
+
+
+})
+
+
+.catch(()=>{});
+
+
+}
+
+
+
+setInterval(checkStatus,7000);
+
+
+
+})();
+
+
 </script>
+
+
 {% endif %}
+
+
+
 {% endblock %}
