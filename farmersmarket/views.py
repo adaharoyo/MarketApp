@@ -649,3 +649,66 @@ def farmer_report_pdf(request):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="farmer_report_{farmer.id}.pdf"'
     return response
+
+
+
+# ─── MISSING VIEWS REQUIRED BY URLS.PY ──────────────────────────────────────
+
+def farmer_earnings_view(request):
+    if not request.user.is_authenticated: return redirect('login')
+    farmer = get_object_or_404(Farmer, user=request.user)
+    return render(request, 'farmersmarket/farmer_earnings.html', {'farmer': farmer})
+
+def farmer_sales_history_view(request):
+    if not request.user.is_authenticated: return redirect('login')
+    farmer = get_object_or_404(Farmer, user=request.user)
+    return render(request, 'farmersmarket/farmer_sales_list.html', {'farmer': farmer})
+
+@require_POST
+def mark_notifications_read(request):
+    if request.user.is_authenticated:
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({'status': 'success'})
+
+def notifications_poll(request):
+    return JsonResponse({'unread_count': 0})
+
+def check_notifications(request):
+    return JsonResponse({'status': 'ok'})
+
+def farmer_new_orders_check(request):
+    return JsonResponse({'new_orders': False})
+
+def add_product_view(request):
+    if not request.user.is_authenticated: return redirect('login')
+    return render(request, 'add_product.html')
+
+def edit_product_view(request, product_id):
+    if not request.user.is_authenticated: return redirect('login')
+    return render(request, 'edit_product.html')
+
+def delete_product_view(request, product_id):
+    if not request.user.is_authenticated: return redirect('login')
+    return redirect('dashboard')
+
+def cancel_order_view(request, order_id):
+    if not request.user.is_authenticated: return redirect('login')
+    order = get_object_or_404(Order, pk=order_id)
+    order.status = 'Cancelled'
+    order.save()
+    return redirect('order_detail', order_id=order_id)
+
+def receipt_view(request, order_id):
+    if not request.user.is_authenticated: return redirect('login')
+    return render(request, 'receipt.html', {'order_id': order_id})
+
+def generate_receipt(request, order_id):
+    if not request.user.is_authenticated: return redirect('login')
+    return HttpResponse("Receipt PDF Generation Placeholder")
+
+# Admin Stub Placeholders
+def add_client_view(request): return HttpResponse("Admin Add Client")
+def add_farm_view(request): return HttpResponse("Admin Add Farm")
+def add_farmer_view(request): return HttpResponse("Admin Add Farmer")
+def add_order_view(request): return HttpResponse("Admin Add Order")
+def add_payment_view(request): return HttpResponse("Admin Add Payment")
