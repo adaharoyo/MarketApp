@@ -514,7 +514,8 @@ VALID_TRANSITIONS = {
 def update_order_status(request, order_id):
     if not request.user.is_authenticated:
         return redirect('login')
-    order  = get_object_or_404(Order, pk=order_id)
+        
+    order = get_object_or_404(Order, pk=order_id)
     farmer = get_object_or_404(Farmer, user=request.user)
 
     if not order.items.filter(product__farmer=farmer).exists():
@@ -522,10 +523,10 @@ def update_order_status(request, order_id):
         return redirect('dashboard')
 
     new_status = request.POST.get('status')
-    allowed    = VALID_TRANSITIONS.get(order.status, [])
+    allowed = VALID_TRANSITIONS.get(order.status, [])
 
     if new_status in allowed:
-
+        # If order is cancelled, return quantities to stock
         if new_status == 'Cancelled':
             for item in order.items.all():
                 item.product.quantity_available += item.quantity
@@ -533,42 +534,41 @@ def update_order_status(request, order_id):
                     item.product.is_available = True
                 item.product.save()
 
-    order.status = new_status
+        order.status = new_status
 
-    if new_status == 'Delivered':
-        order.delivered_at = timezone.now()
+        if new_status == 'Delivered':
+            order.delivered_at = timezone.now()
 
-    if new_status == 'Ready':
-        order.confirmation_code = str(random.randint(100000, 999999))
+        if new_status == 'Ready':
+            order.confirmation_code = str(random.randint(100000, 999999))
 
-    order.save()
+        order.save()
 
-    if new_status == 'Ready':
-        status_message = (
-            f'Seller is delivering your order #{order.id}. '
-            f'It is now ready for dispatch.'
+        # Build notification strings based on status updates
+        if new_status == 'Ready':
+            status_message = (
+                f'Seller is delivering your order #{order.id}. '
+                f'It is now ready for dispatch.'
+            )
+        elif new_status == 'Delivered':
+            status_message = (
+                f'Your order #{order.id} has been delivered. '
+                f'Enjoy your produce!'
+            )
+        else:
+            status_message = f'Your order #{order.id} is now: {new_status}.'
+
+        _queue_notification(
+            recipient_type='Client',
+            client=order.client,
+            notification_type='Status',
+            message=status_message,
+            related_order=order,
         )
 
-    elif new_status == 'Delivered':
-        status_message = (
-            f'Your order #{order.id} has been delivered. '
-            f'Enjoy your produce!'
-        )
-
+        messages.success(request, f'Order #{order.id} → {new_status}.')
     else:
-        status_message = f'Your order #{order.id} is now: {new_status}.'
-
-    _queue_notification(
-        recipient_type='Client',
-        client=order.client,
-        notification_type='Status',
-        message=status_message,
-        related_order=order,
-    )
-
-    messages.success(request, f'Order #{order.id} → {new_status}.')
-
-    else:
+        # This else block now maps perfectly back to: if new_status in allowed
         messages.error(
             request,
             f'Cannot change from {order.status} to {new_status}.'
