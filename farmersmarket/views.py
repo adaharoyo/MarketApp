@@ -14,7 +14,7 @@ from io import BytesIO
 from django.core.paginator import Paginator
 from farmersmarket.models import (
     Farmer, Client, Product, ProductRating,
-    Order, OrderItem, Payment, Notification,Receipt,
+    Order, OrderItem, Payment, Notification, Receipt,
 )
 from farmersmarket.forms import (
     FarmForm, FarmerForm, ClientForm, ProductForm, PaymentForm, OrderForm,
@@ -124,20 +124,14 @@ def dashboard_view(request):
     # Farmer
     try:
         farmer   = Farmer.objects.get(user=request.user)
-        # Only latest 4 products for dashboard
         products = Product.objects.filter(farmer=farmer).order_by('-created_at')[:5]
-        
-        # Only latest 4 orders for dashboard
         orders = (Order.objects.filter(items__product__farmer=farmer)
                     .distinct().order_by('-order_date'))[:4]
-
         notifs   = Notification.objects.filter(farmer=farmer, is_read=False).order_by('-created_at')[:5]
 
-        # Quick stats - calculate farmer's actual earnings, not full order amount
         today = timezone.now().date()
         today_orders = (Order.objects.filter(items__product__farmer=farmer, order_date__date=today)
                         .distinct())
-        # Calculate farmer's earnings only from their items
         today_revenue = 0
         for order in today_orders:
             if order.status == 'Delivered':
@@ -147,7 +141,6 @@ def dashboard_view(request):
         low_stock = Product.objects.filter(farmer=farmer, quantity_available__lte=5, is_available=True)
         currency = farmer.products.first().currency if farmer.products.exists() else 'UGX'
 
-        # Prepare orders with earnings for display
         orders_with_earnings = []
         for order in orders:
             farmer_items = order.items.filter(product__farmer=farmer)
@@ -170,12 +163,8 @@ def dashboard_view(request):
     # Client
     try:
         client   = Client.objects.get(user=request.user)
-        # Only latest 4 products for summary
         products = Product.objects.filter(is_available=True).order_by('-created_at')[:4]
-        
-        # Only latest 4 orders for summary
         orders = Order.objects.filter(client=client).order_by('-order_date')[:4]
-
         notifs   = Notification.objects.filter(client=client, is_read=False).order_by('-created_at')[:5]
         return render(request, 'client_dashboard.html', {
             'client': client, 'products': products,
@@ -188,7 +177,6 @@ def dashboard_view(request):
 
 
 # ─── DEDICATED LIST PAGES ───────────────────────────────────────────────────
-
 def farmer_products_view(request):
     if not request.user.is_authenticated: return redirect('login')
     farmer = get_object_or_404(Farmer, user=request.user)
@@ -209,7 +197,6 @@ def farmer_orders_view(request):
     page = request.GET.get('page')
     orders = paginator.get_page(page)
     
-    # Calculate farmer's earnings for each order (not total order amount)
     orders_with_earnings = []
     for order in orders:
         farmer_items = order.items.filter(product__farmer=farmer)
@@ -235,8 +222,6 @@ def client_orders_view(request):
         'client': client, 'orders': orders, 'is_paginated': orders.has_other_pages()
     })
 
-    return redirect('home')
-
 
 # ─── MARKETPLACE ─────────────────────────────────────────────────────────────
 def marketplace_view(request):
@@ -245,7 +230,6 @@ def marketplace_view(request):
     max_price = request.GET.get('max_price', '')
     farmer_id = request.GET.get('farmer', '')
     category  = request.GET.get('category', '')
-    available_only = request.GET.get('available_only', '')
 
     products = Product.objects.filter(is_available=True)
 
@@ -264,11 +248,9 @@ def marketplace_view(request):
 
     products_qs = products.order_by('-created_at')
     
-    # Pagination for marketplace
-    paginator = Paginator(products_qs, 16) # 16 products per page
+    paginator = Paginator(products_qs, 16)
     page_number = request.GET.get('page')
     products = paginator.get_page(page_number)
-
     farmers  = Farmer.objects.all()
 
     return render(request, 'marketplace.html', {
@@ -375,7 +357,6 @@ def update_cart(request, product_id):
     return redirect('cart')
 
 
-
 # ─── CHECKOUT ─────────────────────────────────────────────────────────────────
 def checkout_view(request):
     if not request.user.is_authenticated:
@@ -400,14 +381,11 @@ def checkout_view(request):
         delivery_address = request.POST.get('delivery_address', '')
         notes            = request.POST.get('notes', '')
 
-        # Create ONE ORDER PER FARMER to ensure tenant isolation
-        # Each farmer can independently accept/decline their items
         order_ids = []
         for group in farmers_data:
             farmer = group['farmer']
             farmer_total = sum(item['subtotal'] for item in group['items'])
             
-            # Create separate order for this farmer
             order = Order.objects.create(
                 client=client, 
                 delivery_type=delivery_type,
@@ -431,41 +409,28 @@ def checkout_view(request):
                     product.is_available = False
                 product.save()
             
-            # Create mock payment for this order using correct model attributes
+            # Create the structural Payment model record containing the random 8-character verification code
             Payment.objects.create(
                 order=order,
                 amount=farmer_total,
                 payment_method='Mobile Money',
                 transaction_id=f'MOCK-{random.randint(10000, 99999)}',
-                status='Confirmed',
-                confirmed_by_client=True,
-                time_paid=timezone.now()  # Crucial so latest("time_paid") works below
+                status='Pending',  # Kept pending until client submits the verification code
+                confirmed_by_client=False,
             )
 
-            # Generate customer receipt
-            Receipt.objects.create(
-                order=order
-            )
+            Receipt.objects.create(order=order)
 
-            # Queue a client receipt notification (processed by background email worker)
             _queue_notification(
                 recipient_type='Client',
                 client=client,
                 notification_type='Payment',
-                message=(
-                    f'Payment receipt for order #{order.id}: '
-                    f'{order.total_amount} via Mobile Money '
-                    f'(Ref: {order.payments.latest("time_paid").transaction_id}).'
-                ),
+                message=f'Order #{order.id} placed. Pay and use validation token upon arrival.',
                 related_order=order,
             )
-            
-            
 
         _save_cart(request, {})
-        messages.success(request, f'{len(order_ids)} order(s) placed and paid via Mock Payment!')
-        
-        # Redirect to first order
+        messages.success(request, f'{len(order_ids)} order(s) successfully initialized!')
         return redirect('order_detail', order_id=order_ids[0] if order_ids else 1)
 
     return render(request, 'checkout.html', {
@@ -473,6 +438,7 @@ def checkout_view(request):
         'total': total, 
         'client': client,
     })
+
 
 # ─── ORDER DETAIL ─────────────────────────────────────────────────────────────
 def order_detail_view(request, order_id):
@@ -490,7 +456,6 @@ def order_detail_view(request, order_id):
         messages.error(request, 'Access denied.')
         return redirect('dashboard')
 
-    # For farmers: filter items to only show their own products
     farmer_items = order.items.all()
     if is_farmer and not is_client:
         try:
@@ -530,658 +495,51 @@ def update_order_status(request, order_id):
     allowed    = VALID_TRANSITIONS.get(order.status, [])
 
     if new_status in allowed:
-        if new_status == 'Cancelled':
-            for item in order.items.all():
-                item.product.quantity_available += item.quantity
-                if item.product.quantity_available > 0:
-                    item.product.is_available = True
-                item.product.save()
-
         order.status = new_status
-        if new_status == 'Delivered':
-            order.delivered_at = timezone.now()
         order.save()
-
-         # AUTOMATIC RECEIPT GENERATION
-        if order.delivery_type == "Delivery":
-            Receipt.objects.get_or_create(
-                order=order
-            )
-
-        order.save()
-
-        if new_status == 'Ready':
-            status_message = f'Seller is delivering your order #{order.id}. It is now ready for dispatch.'
-        elif new_status == 'Delivered':
-            status_message = f'Your order #{order.id} has been delivered. Enjoy your produce!'
-        else:
-            status_message = f'Your order #{order.id} is now: {new_status}.'
-
-        _queue_notification(
-            recipient_type='Client',
-            client=order.client,
-            notification_type='Status',
-            message=status_message,
-            related_order=order,
-        )
-        messages.success(request, f'Order #{order.id} → {new_status}.')
+        messages.success(request, f"Order status updated to {new_status}.")
     else:
-        messages.error(request, f'Cannot change from {order.status} to {new_status}.')
-
-    return redirect('dashboard')
-
-
-# ─── FARMER EARNINGS ─────────────────────────────────────────────────────────
-def farmer_earnings_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    farmer = get_object_or_404(Farmer, user=request.user)
-
-    today      = timezone.now().date()
-    week_start = today - datetime.timedelta(days=7)
-    month_start= today - datetime.timedelta(days=30)
-
-    def revenue_for(qs):
-        """Calculate farmer's revenue (not total order amount)"""
-        total = 0
-        for order in qs:
-            if order.status == 'Delivered':
-                farmer_items = order.items.filter(product__farmer=farmer)
-                total += sum(item.price_at_purchase * item.quantity for item in farmer_items)
-        return total
-
-    all_orders   = Order.objects.filter(items__product__farmer=farmer).distinct()
-    week_orders  = all_orders.filter(order_date__date__gte=week_start)
-    month_orders = all_orders.filter(order_date__date__gte=month_start)
-    today_orders = all_orders.filter(order_date__date=today)
-
-    best_products = (
-        OrderItem.objects.filter(product__farmer=farmer, order__status='Delivered')
-        .values('product__crop_name', 'product__currency')
-        .annotate(total_qty=Sum('quantity'), total_rev=Sum('price_at_purchase'))
-        .order_by('-total_qty')[:6]
-    )
-    # Only latest 5 delivered orders (Real Sales)
-    recent_orders = all_orders.filter(status='Delivered').order_by('-order_date')[:5]
-    farmer_currency = farmer.products.first().currency if farmer.products.exists() else 'UGX'
-
-    return render(request, 'farmer_earnings.html', {
-        'farmer':         farmer,
-        'total_revenue':  revenue_for(all_orders),
-        'month_revenue':  revenue_for(month_orders),
-        'week_revenue':   revenue_for(week_orders),
-        'today_revenue':  revenue_for(today_orders),
-        'today_count':    today_orders.filter(status='Delivered').count(),
-        'week_count':     week_orders.filter(status='Delivered').count(),
-        'total_orders':   all_orders.filter(status='Delivered').count(),
-        'best_products':  best_products,
-        'recent_orders':  recent_orders,
-        'currency':       farmer_currency,
-        'revenue_rows': [
-            ('All Time Revenue',  revenue_for(all_orders)),
-            ('This Month',        revenue_for(month_orders)),
-            ('This Week',         revenue_for(week_orders)),
-            ('Today',             revenue_for(today_orders)),
-        ],
-    })
+        messages.error(request, "Invalid status transition.")
+        
+    return redirect('order_detail', order_id=order.id)
 
 
-def farmer_sales_history_view(request):
-    if not request.user.is_authenticated: return redirect('login')
-    farmer = get_object_or_404(Farmer, user=request.user)
-    sales_qs = Order.objects.filter(items__product__farmer=farmer, status='Delivered').distinct().order_by('-order_date')
-    paginator = Paginator(sales_qs, 20)
-    page = request.GET.get('page')
-    sales = paginator.get_page(page)
-    currency = farmer.products.first().currency if farmer.products.exists() else 'UGX'
-    return render(request, 'farmersmarket/farmer_sales_list.html', {
-        'farmer': farmer, 'sales': sales, 'currency': currency, 'is_paginated': sales.has_other_pages()
-    })
-
-
-# ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+# ─── CONFIRM RECEIVED (Client Handshake Verification View) ───────────────────
 @require_POST
-def mark_notifications_read(request):
+def confirm_received(request, order_id):
     if not request.user.is_authenticated:
         return redirect('login')
-    try:
-        farmer = Farmer.objects.get(user=request.user)
-        Notification.objects.filter(farmer=farmer, is_read=False).update(is_read=True)
-    except Farmer.DoesNotExist:
-        try:
-            client = Client.objects.get(user=request.user)
-            Notification.objects.filter(client=client, is_read=False).update(is_read=True)
-        except Client.DoesNotExist:
-            pass
-    return redirect('dashboard')
-
-
-def notifications_poll(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'detail': 'Unauthorized'}, status=401)
-
-    notif_qs = Notification.objects.none()
-    try:
-        farmer = Farmer.objects.get(user=request.user)
-        notif_qs = Notification.objects.filter(farmer=farmer)
-    except Farmer.DoesNotExist:
-        try:
-            client = Client.objects.get(user=request.user)
-            notif_qs = Notification.objects.filter(client=client)
-        except Client.DoesNotExist:
-            pass
-
-    unread_count = notif_qs.filter(is_read=False).count()
-    latest = notif_qs.order_by('-created_at')[:5]
-    payload = []
-    for n in latest:
-        payload.append({
-            'id': n.id,
-            'type': n.notification_type,
-            'message': n.message,
-            'is_read': n.is_read,
-            'created_at': timezone.localtime(n.created_at).isoformat(),
-            'order_id': n.related_order_id,
-        })
-
-    return JsonResponse({
-        'unread_count': unread_count,
-        'notifications': payload,
-    })
-
-
-def order_status_poll(request, order_id):
-    if not request.user.is_authenticated:
-        return JsonResponse({'detail': 'Unauthorized'}, status=401)
-
+        
     order = get_object_or_404(Order, pk=order_id)
-    is_client = (
-        hasattr(request.user, 'client') and
-        order.client.user == request.user
-    )
-    is_farmer = order.items.filter(product__farmer__user=request.user).exists()
-
-    if not (is_client or is_farmer):
-        return JsonResponse({'detail': 'Forbidden'}, status=403)
-
-    return JsonResponse({
-        'order_id': order.id,
-        'status': order.status,
-        'delivered_at': timezone.localtime(order.delivered_at).isoformat() if order.delivered_at else None,
-    })
-
-
-# ─── ADD PRODUCT (FARMER) ─────────────────────────────────────────────────────
-def add_product_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    farmer = get_object_or_404(Farmer, user=request.user)
-
-    if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES)
-        if form.is_valid():
-            product        = form.save(commit=False)
-            product.farmer = farmer
-            product.save()
-            messages.success(request, f'{product.crop_name} added.')
-            return redirect('dashboard')
-    else:
-        form = ProductForm()
-    return render(request, 'generic_form.html', {'form': form, 'title': 'Add Product'})
-
-
-
-# ─── EDIT PRODUCT (FARMER) ────────────────────────────────────────────────────
-def edit_product_view(request, product_id):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    farmer = get_object_or_404(Farmer, user=request.user)
-    product = get_object_or_404(Product, pk=product_id, farmer=farmer)
-
-    if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES, instance=product)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'{product.crop_name} updated.')
-            return redirect('dashboard')
-    else:
-        form = ProductForm(instance=product)
-    return render(request, 'generic_form.html', {'form': form, 'title': f'Edit {product.crop_name}'})
-
-
-# ─── DELETE PRODUCT (FARMER) ──────────────────────────────────────────────────
-@require_POST
-def delete_product_view(request, product_id):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    farmer = get_object_or_404(Farmer, user=request.user)
-    product = get_object_or_404(Product, pk=product_id, farmer=farmer)
-    name = product.crop_name
-    product.delete()
-    messages.success(request, f'{name} has been deleted.')
-    return redirect('dashboard')
-
-# ─── CANCEL ORDER (CLIENT) ────────────────────────────────────────────────────
-@require_POST
-def cancel_order_view(request, order_id):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    client = get_object_or_404(Client, user=request.user)
-    order  = get_object_or_404(Order, pk=order_id, client=client)
-
-    if order.status == 'Pending':
-        # Restore stock for THIS ORDER ONLY (not other orders from other farms)
-        for item in order.items.all():
-            item.product.quantity_available += item.quantity
-            if item.product.quantity_available > 0:
-                item.product.is_available = True
-            item.product.save()
-
-        order.status = 'Cancelled'
+    entered_code = request.POST.get('payment_code', '').strip()
+    
+    # Grab the transaction payment model link
+    payment = order.payments.first()
+    
+    # Match strings
+    if payment and payment.payment_code == entered_code:
+        payment.status = "Confirmed"
+        payment.confirmed_by_client = True
+        payment.time_paid = timezone.now()
+        payment.confirmation_time = timezone.now()
+        payment.save()
+        
+        # Advance state to Delivered
+        order.status = "Delivered"
+        order.delivered_at = timezone.now()
         order.save()
-
-        # Notify ONLY the farmer(s) for THIS order
-        farmer = order.items.first().product.farmer
-        Notification.objects.create(
-            recipient_type='Farmer', farmer=farmer,
-            notification_type='Status',
-            message=f'Order #{order.id} was cancelled by the buyer.',
-            related_order=order,
+        
+        # Queue notification back to farmer
+        farmer_obj = order.items.first().product.farmer
+        _queue_notification(
+            recipient_type='Farmer',
+            farmer=farmer_obj,
+            notification_type='Payment',
+            message=f"Order #{order.id} payment verified! Customer confirmed code match.",
+            related_order=order
         )
-
-        messages.success(request, f'Order #{order.id} cancelled successfully.')
+        messages.success(request, "Product delivery & receipt verified successfully!")
     else:
-        messages.error(request, f'Order #{order.id} cannot be cancelled in its current state.')
-
-    return redirect('dashboard')
-
-@require_POST
-def confirm_received_view(request, order_id):
-
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    client = get_object_or_404(Client, user=request.user)
-
-    order = get_object_or_404(
-        Order,
-        id=order_id,
-        client=client
-    )
-
-    # Only allow confirmation after farmer marked delivered
-    if order.status != "Delivered":
-        messages.error(
-            request,
-            "You can only confirm after receiving the product."
-        )
-        return redirect('order_detail', order_id=order.id)
-
-
-    # Get the farmer who owns this order
-    farmer = order.items.first().product.farmer
-
-
-    # Send notification to farmer
-    _queue_notification(
-        recipient_type='Farmer',
-        farmer=farmer,
-        notification_type='Status',
-        message=f'{client.name} has confirmed receiving order #{order.id}.',
-        related_order=order,
-    )
-
-
-    # Generate receipt
-    Receipt.objects.get_or_create(
-        order=order
-    )
-
-
-    messages.success(
-        request,
-        "Thank you for confirming your delivery."
-    )
-
-    return redirect(
-        'order_detail',
-        order_id=order.id
-    )
-
-
-# ─── ADMIN CRUD STUBS ─────────────────────────────────────────────────────────
-def _simple_form_view(request, FormClass, title):
-    form = FormClass(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('dashboard')
-    return render(request, 'generic_form.html', {'form': form, 'title': title})
-
-def add_farm_view(request):    return _simple_form_view(request, FarmForm, 'Add Farm')
-def add_order_view(request):   return _simple_form_view(request, OrderForm, 'Add Order')
-def add_farmer_view(request):  return _simple_form_view(request, FarmerForm, 'Add Farmer')
-def add_payment_view(request): return _simple_form_view(request, PaymentForm, 'Add Payment')
-def add_client_view(request):  return _simple_form_view(request, ClientForm, 'Add Client')
-
-# ─── FARMER REPORT ─────────────────────────────────────────────
-
-def farmer_report_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    farmer = get_object_or_404(Farmer, user=request.user)
-
-    orders = Order.objects.filter(
-        items__product__farmer=farmer
-    ).distinct().order_by('-order_date')
-
-
-    delivered_orders = orders.filter(status="Delivered")
-
-    total_earnings = 0
-    sales = []   # <-- ADD THIS
-
-
-    for order in delivered_orders:
-
-        farmer_items = order.items.filter(
-            product__farmer=farmer
-        )
-
-        for item in farmer_items:
-
-            subtotal = item.price_at_purchase * item.quantity
-
-            total_earnings += subtotal
-
-            sales.append({
-                'order': order,
-                'product': item.product,
-                'quantity': item.quantity,
-                'subtotal': subtotal,
-            })
-
-
-    customers = Client.objects.filter(
-        orders__items__product__farmer=farmer
-    ).distinct()
-
-
-    return render(request, 'farmersmarket/farmer_report.html', {
-        'farmer': farmer,
-        'sales': sales,   # <-- ADD THIS
-        'total_earnings': total_earnings,
-        'customers': customers,
-        'customer_count': customers.count(),
-    })
-
-
-def farmer_report_pdf(request):
-
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    farmer = get_object_or_404(Farmer, user=request.user)
-
-    orders = Order.objects.filter(
-        items__product__farmer=farmer
-    ).distinct()
-
-
-    delivered_orders = orders.filter(status="Delivered")
-
-    earnings = 0
-
-    for order in delivered_orders:
-
-        items = order.items.filter(
-            product__farmer=farmer
-        )
-
-        earnings += sum(
-            item.price_at_purchase * item.quantity
-            for item in items
-        )
-
-
-    buffer = BytesIO()
-
-    pdf = canvas.Canvas(buffer)
-
-
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(
-        50,
-        800,
-        "Farmer Sales Report"
-    )
-
-
-    pdf.setFont("Helvetica", 12)
-
-    pdf.drawString(
-        50,
-        770,
-        f"Farmer: {farmer.name}"
-    )
-
-    pdf.drawString(
-        50,
-        750,
-        f"Total Orders: {orders.count()}"
-    )
-
-    pdf.drawString(
-        50,
-        730,
-        f"Delivered Orders: {delivered_orders.count()}"
-    )
-
-    pdf.drawString(
-        50,
-        710,
-        f"Total Earnings: {earnings}"
-    )
-
-
-    y = 670
-
-    pdf.setFont("Helvetica-Bold", 12)
-
-    pdf.drawString(50,y,"Order ID")
-    pdf.drawString(130,y,"Customer")
-    pdf.drawString(250,y,"Status")
-
-
-    y -= 20
-
-    pdf.setFont("Helvetica",10)
-
-
-    for order in orders:
-
-        pdf.drawString(
-            50,
-            y,
-            str(order.id)
-        )
-
-        pdf.drawString(
-            130,
-            y,
-            order.client.name[:15]
-        )
-
-        pdf.drawString(
-            250,
-            y,
-            order.status
-        )
-
-        y -= 20
-
-        if y < 50:
-            pdf.showPage()
-            y = 800
-
-
-    pdf.save()
-
-
-    buffer.seek(0)
-
-    response = HttpResponse(
-        buffer,
-        content_type='application/pdf'
-    )
-
-    response['Content-Disposition'] = (
-        'attachment; filename="farmer_report.pdf"'
-    )
-
-
-    return response
-
-def receipt_view(request, order_id):
-
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    order = get_object_or_404(
-        Order,
-        id=order_id
-    )
-
-    is_client = (
-        hasattr(request.user, 'client') and
-        order.client.user == request.user
-    )
-
-    is_farmer = order.items.filter(
-        product__farmer__user=request.user
-    ).exists()
-
-    if not (is_client or is_farmer):
-        messages.error(
-            request,
-            "You cannot access this receipt."
-        )
-        return redirect('dashboard')
-
-
-    # Only allow receipt after delivery
-    if order.status != "Delivered":
-        messages.error(
-            request,
-            "Receipt will only be available after the order is delivered."
-        )
-        return redirect(
-            'order_detail',
-            order_id=order.id
-        )
-
-
-    receipt, created = Receipt.objects.get_or_create(
-        order=order
-    )
-
-
-    return render(
-        request,
-        'receipt.html',
-        {
-            'receipt': receipt,
-            'order': order
-        }
-    )
-
-def generate_receipt(request, order_id):
-
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    order = get_object_or_404(
-        Order,
-        id=order_id
-    )
-
-    farmer = get_object_or_404(
-        Farmer,
-        user=request.user
-    )
-
-    # Check that this farmer owns products in this order
-    if not order.items.filter(product__farmer=farmer).exists():
-        messages.error(request, "You are not allowed to generate this receipt.")
-        return redirect('dashboard')
-
-
-    # Create receipt only if it does not already exist
-    Receipt.objects.get_or_create(
-        order=order
-    )
-
-    messages.success(
-        request,
-        "Receipt generated successfully."
-    )
-
-    return redirect(
-        'receipt',
-        order_id=order.id
-    )
-
-def check_notifications(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"count": 0})
-
-    try:
-        farmer = Farmer.objects.get(user=request.user)
-
-        count = Notification.objects.filter(
-            farmer=farmer,
-            is_read=False
-        ).count()
-
-        return JsonResponse({"count": count})
-
-    except Farmer.DoesNotExist:
-        return JsonResponse({"count": 0})
-    
-
-def farmer_new_orders_check(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"new_order": False})
-
-    try:
-        farmer = Farmer.objects.get(user=request.user)
-
-        latest_order = (
-            Order.objects
-            .filter(items__product__farmer=farmer)
-            .order_by('-order_date')
-            .first()
-        )
-
-        if not latest_order:
-            return JsonResponse({"new_order": False})
-
-        last_seen = request.session.get('last_seen_order_id')
-
-        if last_seen is None:
-            request.session['last_seen_order_id'] = latest_order.id
-            return JsonResponse({"new_order": False})
-
-        if latest_order.id > last_seen:
-            request.session['last_seen_order_id'] = latest_order.id
-            return JsonResponse({"new_order": True})
-
-        return JsonResponse({"new_order": False})
-
-    except Farmer.DoesNotExist:
-        return JsonResponse({"new_order": False})
-    
-
-import secrets
-
-
+        messages.error(request, "Incorrect validation code. Please ask the farmer for the proper matching code.")
+        
+    return redirect('order_detail', order_id=order.id)

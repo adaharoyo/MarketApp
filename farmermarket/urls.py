@@ -86,7 +86,7 @@ urlpatterns = [
     views.confirm_received_view,
     name='confirm_received'),
 
-   
+   path('order/<int:order_id>/confirm-received/', views.confirm_received, name='confirm_received'),
 
 
 

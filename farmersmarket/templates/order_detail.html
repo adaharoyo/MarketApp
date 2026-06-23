@@ -5,7 +5,6 @@
 <div class="container" style="max-width:720px;margin:2rem auto 4rem;">
 
 
-<!-- HEADER -->
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
 
     <div>
@@ -41,8 +40,6 @@
 
 
 
-
-<!-- ORDER ITEMS -->
 
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:1.5rem;">
 
@@ -188,9 +185,6 @@ Total
 
 
 
-<!-- DELIVERY INFO -->
-
-
 <div class="card" style="padding:1rem;margin-bottom:1.5rem;">
 
 
@@ -234,9 +228,6 @@ Delivery Information
 
 
 
-<!-- ACTIONS -->
-
-
 <div style="display:flex;gap:.7rem;flex-wrap:wrap;">
 
 
@@ -261,9 +252,6 @@ Shop More
 
 
 
-<!-- RECEIPT -->
-
-
 {% if order.status == "Delivered" %}
 
 
@@ -284,28 +272,26 @@ class="btn btn-primary">
 
 
 
-<!-- CLIENT CONFIRM DELIVERY -->
+{% if is_client and order.status == "Ready" %}
 
 
-{% if is_client and order.status == "Delivered" %}
-
-
-<form method="post"
-action="{% url 'confirm_received' order.id %}">
-
-
-{% csrf_token %}
-
-
-<button class="btn btn-primary"
-type="submit">
-
-📦 Confirm Received
-
-</button>
-
-
-</form>
+<div class="card" style="width: 100%; padding: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; background: #fff; border: 1px solid #eee; border-radius: 8px;">
+    <h5 style="color:#510d0a; margin-top:0; font-size:1rem; display: flex; align-items: center; gap: 0.5rem;">
+        🔐 Confirm Product Receipt & Payment
+    </h5>
+    <p style="color:#666; font-size:.82rem; margin-bottom:1rem;">
+        Enter the payment code given by the farmer after receiving your product.
+    </p>
+    
+    <form method="post" action="{% url 'confirm_received' order.id %}" style="display:flex; gap:.5rem; max-width:400px; margin:0;">
+        {% csrf_token %}
+        <input type="text" name="payment_code" placeholder="Enter code" required
+               style="flex:1; padding:.4rem .6rem; border:1.5px solid #ddd; border-radius:6px; font-size:.88rem; font-family: monospace;">
+        <button class="btn btn-primary" type="submit" style="padding:.45rem 1rem; font-size:.82rem; margin:0;">
+            Confirm Payment
+        </button>
+    </form>
+</div>
 
 
 {% endif %}
@@ -317,7 +303,29 @@ type="submit">
 
 
 
-<!-- FARMER RECEIPT -->
+{% if is_farmer and order.status == "Ready" %}
+
+
+<div class="card" style="width: 100%; padding: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; background: #faf9f6; border: 1px solid #f0e8c4; border-radius: 8px;">
+    <h5 style="color:#510d0a; margin-top:0; font-size:1rem;">
+        🔑 Delivery Verification Code
+    </h5>
+    <p style="color:#666; font-size:.82rem; margin-bottom:0.5rem;">
+        Provide this secure verification code to the customer to complete their order handover:
+    </p>
+    <div style="font-family: monospace; font-size: 1.25rem; font-weight: bold; color: #510a0a; background: #fdf3d0; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">
+        {{ order.payments.first.payment_code }}
+    </div>
+</div>
+
+
+{% endif %}
+
+
+
+
+
+
 
 
 {% if is_farmer and order.delivery_type == "Pickup" and order.status == "Ready" %}
@@ -342,20 +350,17 @@ class="btn btn-primary">
 
 
 
-<!-- CANCEL ORDER -->
-
-
 {% if is_client and order.status == "Pending" %}
 
 
 <form method="post"
-action="{% url 'cancel_order' order.id %}">
+action="{% url 'cancel_order' order.id %}" style="margin:0;">
 
 
 {% csrf_token %}
 
 
-<button class="btn btn-danger">
+<button class="btn btn-danger" type="submit">
 
 Cancel Order
 
