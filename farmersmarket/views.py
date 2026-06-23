@@ -921,7 +921,7 @@ def farmer_report_view(request):
 
     # Calculate totals
     total_products = products.count()
-    total_stock = products.aggregate(total=Sum('quantity'))['total'] or 0
+    total_stock = products.aggregate(total=Sum('quantity_available'))['total'] or 0
 
     # Create PDF
     buffer = BytesIO()
@@ -942,7 +942,7 @@ def farmer_report_view(request):
         pdf.drawString(
             100,
             y,
-            f"{product.name} - Price: {product.price}"
+            f"{product.crop_name} - Price: {product.price}"
         )
         y -= 20
 
