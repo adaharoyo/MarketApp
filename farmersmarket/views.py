@@ -957,49 +957,60 @@ def farmer_report_view(request):
             ])
 
 
-    response = HttpResponse(content_type="application/pdf")
+        response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = (
         'attachment; filename="farmer_earnings_report.pdf"'
     )
 
-    pdf = canvas.Canvas(response, pagesize=letter)
-
-    width, height = letter
-
-
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(
-        180,
-        height - 50,
-        "Farmer Earnings Report"
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=A4,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
     )
 
+    styles = getSampleStyleSheet()
 
-    pdf.setFont("Helvetica", 12)
-    pdf.drawString(
-        50,
-        height - 90,
-        f"Farmer: {farmer.name}"
+    content = []
+
+    # Title
+    content.append(
+        Paragraph(
+            "Farmer Earnings Report",
+            styles["Title"]
+        )
     )
 
-    pdf.drawString(
-        50,
-        height - 110,
-        f"Total Earnings: UGX {total_earnings:,.0f}"
+    content.append(Spacer(1, 20))
+
+    # Summary
+    content.append(
+        Paragraph(
+            f"""
+            <b>Farmer:</b> {farmer.name}<br/>
+            <b>Total Earnings:</b> UGX {total_earnings:,.0f}<br/>
+            <b>Total Items Sold:</b> {total_items}<br/>
+            <b>Total Orders:</b> {orders.count()}
+            """,
+            styles["Normal"]
+        )
     )
 
-    pdf.drawString(
-        50,
-        height - 130,
-        f"Total Items Sold: {total_items}"
-    )
+    content.append(Spacer(1, 25))
 
 
     table = Table(
         table_data,
         repeatRows=1,
         colWidths=[
-            90, 50, 70, 90, 60, 90
+            100,   # customer
+            55,    # order number
+            75,    # date
+            100,   # product
+            60,    # quantity
+            90     # amount
         ]
     )
 
@@ -1010,7 +1021,7 @@ def farmer_report_view(request):
             "BACKGROUND",
             (0,0),
             (-1,0),
-            colors.green
+            colors.darkgreen
         ),
 
         (
@@ -1037,31 +1048,30 @@ def farmer_report_view(request):
 
         (
             "ALIGN",
-            (4,1),
+            (1,1),
             (-1,-1),
             "CENTER"
         ),
 
         (
-            "BACKGROUND",
+            "VALIGN",
+            (0,0),
+            (-1,-1),
+            "MIDDLE"
+        ),
+
+        (
+            "ROWBACKGROUNDS",
             (0,1),
             (-1,-1),
-            colors.whitesmoke
+            [colors.white, colors.lightgrey]
         ),
 
     ]))
 
 
-    table.wrapOn(pdf, width, height)
+    content.append(table)
 
-    table.drawOn(
-        pdf,
-        40,
-        height - 350
-    )
-
-
-    pdf.showPage()
-    pdf.save()
+    doc.build(content)
 
     return response
