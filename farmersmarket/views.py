@@ -871,13 +871,24 @@ def farmer_new_orders_check(request):
     try:
         farmer = Farmer.objects.get(user=request.user)
 
-        count = Order.objects.filter(
+        last_check = request.session.get("last_order_check")
+
+        orders = Order.objects.filter(
             items__product__farmer=farmer,
             status="Pending"
-        ).distinct().count()
+        ).distinct()
+
+        if last_check:
+            orders = orders.filter(
+                order_date__gt=last_check
+            )
+
+        has_new_order = orders.exists()
+
+        request.session["last_order_check"] = timezone.now().isoformat()
 
         return JsonResponse({
-            "new_order": count > 0
+            "new_order": has_new_order
         })
 
     except Farmer.DoesNotExist:
