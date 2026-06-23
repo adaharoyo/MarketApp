@@ -4,7 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from farmersmarket import views
 from farmersmarket.views import (
-     home, login_view, register_view, logout_view, dashboard_view,farmer_report_view,farmer_report_pdf,
+     home, login_view, register_view, logout_view, dashboard_view,
+     farmer_report_view, farmer_report_pdf, # <-- Fully restored!
     # marketplace
     marketplace_view, product_detail_view,
     # ratings
@@ -38,8 +39,9 @@ urlpatterns = [
     path('marketplace/<int:product_id>/rate/', rate_product, name='rate_product'),
 
     # Receipt
-    path('receipt/<int:order_id>/', views.receipt_view,name='receipt' ),
-    path('generate-receipt/<int:order_id>/', views.generate_receipt,name='generate_receipt' ),
+    path('receipt/<int:order_id>/', views.receipt_view, name='receipt'),
+    path('generate-receipt/<int:order_id>/', views.generate_receipt, name='generate_receipt'),
+    
     # Auth
     path('login/', login_view, name='login'),
     path('register/', register_view, name='register'),
@@ -50,9 +52,7 @@ urlpatterns = [
     path('earnings/', farmer_earnings_view, name='farmer_earnings'),
     path('earnings/sales/', farmer_sales_history_view, name='farmer_sales_list'),
 
-    # Farmer reports
-
-    # Farmer reports
+    # Farmer Reports
     path('farmer/report/', farmer_report_view, name='farmer_report'),
     path('farmer/report/pdf/', farmer_report_pdf, name='farmer_report_pdf'),
 
@@ -66,30 +66,17 @@ urlpatterns = [
     path('checkout/', checkout_view, name='checkout'),
     path('orders/<int:order_id>/', order_detail_view, name='order_detail'),
     path('orders/<int:order_id>/status/', update_order_status, name='update_order_status'),
-    
 
     # Notifications
     path('notifications/read/', mark_notifications_read, name='mark_notifications_read'),
     path('notifications/poll/', notifications_poll, name='notifications_poll'),
     path('notifications/check/', views.check_notifications, name='check_notifications'),
     
+    path('farmer/new-orders-check/', views.farmer_new_orders_check, name='farmer_new_orders_check'),
+    path('orders/<int:order_id>/status/poll/', order_status_poll, name='order_status_poll'),
 
-    path( 'farmer/new-orders-check/',views.farmer_new_orders_check,name='farmer_new_orders_check' ),
-
-    path(
-    'orders/<int:order_id>/status/poll/',
-    order_status_poll,
-    name='order_status_poll'),
-
-    path(
-    'orders/<int:order_id>/confirm-received/',
-    views.confirm_received_view,
-    name='confirm_received'),
-
-   path('order/<int:order_id>/confirm-received/', views.confirm_received, name='confirm_received'),
-
-
-
+    # Client Delivery Verification Handshake
+    path('orders/<int:order_id>/confirm-received/', views.confirm_received, name='confirm_received'),
     
     # Farmer product management
     path('add_product/', add_product_view, name='add_product'),

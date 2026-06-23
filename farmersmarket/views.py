@@ -543,3 +543,109 @@ def confirm_received(request, order_id):
         messages.error(request, "Incorrect validation code. Please ask the farmer for the proper matching code.")
         
     return redirect('order_detail', order_id=order.id)
+
+# ─── FARMER REPORT PLACEHOLDER ──────────────────────────────────────────────
+def farmer_report_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    return HttpResponse("Farmer Analytics Report Feature coming soon!")
+
+
+
+
+# ─── FARMER REPORTS & EARNINGS ──────────────────────────────────────────────
+def farmer_report_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    try:
+        farmer = Farmer.objects.get(user=request.user)
+    except Farmer.DoesNotExist:
+        messages.error(request, "Only farmers can access reports.")
+        return redirect('dashboard')
+        
+    # Get all delivered orders for this farmer to calculate total earnings
+    delivered_orders = Order.objects.filter(
+        items__product__farmer=farmer, 
+        status='Delivered'
+    ).distinct().order_by('-order_date')
+    
+    total_earnings = 0
+    orders_data = []
+    
+    for order in delivered_orders:
+        farmer_items = order.items.filter(product__farmer=farmer)
+        order_subtotal = sum(item.price_at_purchase * item.quantity for item in farmer_items)
+        total_earnings += order_subtotal
+        orders_data.append({
+            'order': order,
+            'earnings': order_subtotal
+        })
+        
+    currency = farmer.products.first().currency if farmer.products.exists() else 'UGX'
+        
+    return render(request, 'farmer_report.html', {
+        'farmer': farmer,
+        'orders_data': orders_data,
+        'total_earnings': total_earnings,
+        'currency': currency
+    })
+
+
+def farmer_report_pdf(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+        
+    try:
+        farmer = Farmer.objects.get(user=request.user)
+    except Farmer.DoesNotExist:
+        return HttpResponse("Unauthorized", status=401)
+
+    # Gather data for the PDF
+    delivered_orders = Order.objects.filter(items__product__farmer=farmer, status='Delivered').distinct()
+    total_earnings = 0
+    currency = farmer.products.first().currency if farmer.products.exists() else 'UGX'
+
+    # Create PDF buffer
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer)
+    
+    # Simple Title Card
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(100, 750, f"Earnings & Sales Report - {farmer.name}")
+    p.setFont("Helvetica", 10)
+    p.drawString(100, 735, f"Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
+    p.line(100, 725, 500, 725)
+    
+    # Write Order Details
+    y = 690
+    p.drawString(100, 705, "Order ID")
+    p.drawString(200, 705, "Date")
+    p.drawString(400, 705, f"Earnings ({currency})")
+    p.line(100, 698, 500, 698)
+    
+    for order in delivered_orders:
+        if y < 100:  # New page check
+            p.showPage()
+            y = 750
+            
+        farmer_items = order.items.filter(product__farmer=farmer)
+        earnings = sum(item.price_at_purchase * item.quantity for item in farmer_items)
+        total_earnings += earnings
+        
+        p.drawString(100, y, f"#{order.id}")
+        p.drawString(200, y, order.order_date.strftime('%Y-%m-%d'))
+        p.drawString(400, y, f"{earnings:,.0f}")
+        y -= 25
+        
+    p.line(100, y+10, 500, y+10)
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(100, y-10, f"Total Lifetime Earnings: {currency} {total_earnings:,.0f}")
+    
+    p.showPage()
+    p.save()
+    
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="farmer_report_{farmer.id}.pdf"'
+    return response
