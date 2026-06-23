@@ -525,6 +525,7 @@ def update_order_status(request, order_id):
     allowed    = VALID_TRANSITIONS.get(order.status, [])
 
     if new_status in allowed:
+
         if new_status == 'Cancelled':
             for item in order.items.all():
                 item.product.quantity_available += item.quantity
@@ -532,37 +533,49 @@ def update_order_status(request, order_id):
                     item.product.is_available = True
                 item.product.save()
 
-        order.status = new_status
-        if new_status == 'Delivered':
-            order.delivered_at = timezone.now()
-        order.save()
+    order.status = new_status
 
-        if new_status == 'Ready':
+    if new_status == 'Delivered':
+        order.delivered_at = timezone.now()
 
-            order.confirmation_code = str(random.randint(100000, 999999))
-            order.save()
+    if new_status == 'Ready':
+        order.confirmation_code = str(random.randint(100000, 999999))
 
+    order.save()
+
+    if new_status == 'Ready':
         status_message = (
-        f'Seller is delivering your order #{order.id}. '
-        f'It is now ready for dispatch.' )
-
-        elif new_status == 'Delivered':
-            status_message = f'Your order #{order.id} has been delivered. Enjoy your produce!'
-
-        else:
-            status_message = f'Your order #{order.id} is now: {new_status}.'
-        _queue_notification(
-            recipient_type='Client',
-            client=order.client,
-            notification_type='Status',
-            message=status_message,
-            related_order=order,
+            f'Seller is delivering your order #{order.id}. '
+            f'It is now ready for dispatch.'
         )
-        messages.success(request, f'Order #{order.id} → {new_status}.')
-        else:
-            messages.error(request, f'Cannot change from {order.status} to {new_status}.')
 
-        return redirect('dashboard')
+    elif new_status == 'Delivered':
+        status_message = (
+            f'Your order #{order.id} has been delivered. '
+            f'Enjoy your produce!'
+        )
+
+    else:
+        status_message = f'Your order #{order.id} is now: {new_status}.'
+
+    _queue_notification(
+        recipient_type='Client',
+        client=order.client,
+        notification_type='Status',
+        message=status_message,
+        related_order=order,
+    )
+
+    messages.success(request, f'Order #{order.id} → {new_status}.')
+
+    else:
+        messages.error(
+            request,
+            f'Cannot change from {order.status} to {new_status}.'
+        )
+
+    return redirect('dashboard')
+            
 
 
 # ─── FARMER EARNINGS ─────────────────────────────────────────────────────────
