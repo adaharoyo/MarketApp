@@ -261,6 +261,7 @@ class Payment(models.Model):
         null=True,
         blank=True
     )
+    is_successful = models.BooleanField(default=False)
 
 
     def save(self, *args, **kwargs):
