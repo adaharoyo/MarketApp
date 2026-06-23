@@ -10,6 +10,10 @@ import datetime, random
 from django.http import HttpResponse
 from io import BytesIO
 from reportlab.pdfgen import canvas
+from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
 
 from django.core.paginator import Paginator
 from farmersmarket.models import (
@@ -909,57 +913,155 @@ def confirm_received(request, order_id):
     )
 
 def farmer_report_view(request):
-    # Make sure the farmer is logged in
     if not request.user.is_authenticated:
         return redirect('login')
 
-    # Get farmer profile linked to the logged-in user
     farmer = get_object_or_404(Farmer, user=request.user)
 
-    # Get farmer's products
-    products = Product.objects.filter(farmer=farmer)
+    orders = Order.objects.filter(
+        items__product__farmer=farmer,
+        status="Delivered"
+    ).distinct()
 
-    # Calculate totals
-    total_products = products.count()
-    total_stock = products.aggregate(total=Sum('quantity_available'))['total'] or 0
+    total_earnings = 0
+    total_items = 0
 
-    # Create PDF
-    buffer = BytesIO()
-    pdf = canvas.Canvas(buffer)
+    table_data = [
+        [
+            "Customer",
+            "Order No",
+            "Date",
+            "Product",
+            "Quantity",
+            "Amount (UGX)"
+        ]
+    ]
 
-    pdf.setTitle("Farmer Report")
+    for order in orders:
+        farmer_items = order.items.filter(product__farmer=farmer)
 
-    pdf.drawString(100, 800, "Farmer Market Report")
-    pdf.drawString(100, 770, f"Farmer: {farmer}")
-    pdf.drawString(100, 740, f"Total Products: {total_products}")
-    pdf.drawString(100, 710, f"Total Stock: {total_stock}")
+        for item in farmer_items:
 
-    y = 670
-    pdf.drawString(100, y, "Products:")
-    y -= 30
+            amount = item.price_at_purchase * item.quantity
 
-    for product in products:
-        pdf.drawString(
-            100,
-            y,
-            f"{product.crop_name} - Price: {product.price}"
-        )
-        y -= 20
+            total_earnings += amount
+            total_items += item.quantity
 
-        if y < 50:
-            pdf.showPage()
-            y = 800
+            table_data.append([
+                order.client.name,
+                str(order.id),
+                order.order_date.strftime("%Y-%m-%d"),
+                item.product.crop_name,
+                str(item.quantity),
+                f"{amount:,.0f}"
+            ])
 
-    pdf.save()
 
-    buffer.seek(0)
-
-    response = HttpResponse(
-        buffer,
-        content_type="application/pdf"
-    )
+    response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = (
-        'attachment; filename="farmer_report.pdf"'
+        'attachment; filename="farmer_earnings_report.pdf"'
     )
+
+    pdf = canvas.Canvas(response, pagesize=letter)
+
+    width, height = letter
+
+
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(
+        180,
+        height - 50,
+        "Farmer Earnings Report"
+    )
+
+
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(
+        50,
+        height - 90,
+        f"Farmer: {farmer.name}"
+    )
+
+    pdf.drawString(
+        50,
+        height - 110,
+        f"Total Earnings: UGX {total_earnings:,.0f}"
+    )
+
+    pdf.drawString(
+        50,
+        height - 130,
+        f"Total Items Sold: {total_items}"
+    )
+
+
+    table = Table(
+        table_data,
+        repeatRows=1,
+        colWidths=[
+            90, 50, 70, 90, 60, 90
+        ]
+    )
+
+
+    table.setStyle(TableStyle([
+
+        (
+            "BACKGROUND",
+            (0,0),
+            (-1,0),
+            colors.green
+        ),
+
+        (
+            "TEXTCOLOR",
+            (0,0),
+            (-1,0),
+            colors.white
+        ),
+
+        (
+            "FONT",
+            (0,0),
+            (-1,0),
+            "Helvetica-Bold"
+        ),
+
+        (
+            "GRID",
+            (0,0),
+            (-1,-1),
+            0.5,
+            colors.black
+        ),
+
+        (
+            "ALIGN",
+            (4,1),
+            (-1,-1),
+            "CENTER"
+        ),
+
+        (
+            "BACKGROUND",
+            (0,1),
+            (-1,-1),
+            colors.whitesmoke
+        ),
+
+    ]))
+
+
+    table.wrapOn(pdf, width, height)
+
+    table.drawOn(
+        pdf,
+        40,
+        height - 350
+    )
+
+
+    pdf.showPage()
+    pdf.save()
 
     return response
