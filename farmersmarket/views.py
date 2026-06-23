@@ -10,10 +10,10 @@ import datetime, random
 from django.http import HttpResponse
 from io import BytesIO
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
 
 from django.core.paginator import Paginator
 from farmersmarket.models import (
@@ -926,19 +926,22 @@ def farmer_report_view(request):
     total_earnings = 0
     total_items = 0
 
-    table_data = [
+    data = [
         [
             "Customer",
             "Order No",
             "Date",
             "Product",
-            "Quantity",
+            "Qty",
             "Amount (UGX)"
         ]
     ]
 
     for order in orders:
-        farmer_items = order.items.filter(product__farmer=farmer)
+
+        farmer_items = order.items.filter(
+            product__farmer=farmer
+        )
 
         for item in farmer_items:
 
@@ -947,7 +950,7 @@ def farmer_report_view(request):
             total_earnings += amount
             total_items += item.quantity
 
-            table_data.append([
+            data.append([
                 order.client.name,
                 str(order.id),
                 order.order_date.strftime("%Y-%m-%d"),
@@ -957,121 +960,108 @@ def farmer_report_view(request):
             ])
 
 
-        response = HttpResponse(content_type="application/pdf")
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
     response["Content-Disposition"] = (
         'attachment; filename="farmer_earnings_report.pdf"'
     )
 
-    doc = SimpleDocTemplate(
+
+    pdf = SimpleDocTemplate(
         response,
-        pagesize=A4,
-        rightMargin=40,
-        leftMargin=40,
-        topMargin=40,
-        bottomMargin=40
+        pagesize=letter
     )
+
+
+    elements = []
 
     styles = getSampleStyleSheet()
 
-    content = []
 
-    # Title
-    content.append(
-        Paragraph(
-            "Farmer Earnings Report",
-            styles["Title"]
-        )
+    title = Paragraph(
+        "Farmer Earnings Report",
+        styles["Title"]
     )
 
-    content.append(Spacer(1, 20))
+    elements.append(title)
 
-    # Summary
-    content.append(
-        Paragraph(
-            f"""
-            <b>Farmer:</b> {farmer.name}<br/>
-            <b>Total Earnings:</b> UGX {total_earnings:,.0f}<br/>
-            <b>Total Items Sold:</b> {total_items}<br/>
-            <b>Total Orders:</b> {orders.count()}
-            """,
-            styles["Normal"]
-        )
+    elements.append(
+        Spacer(1, 20)
     )
 
-    content.append(Spacer(1, 25))
+
+    summary = Paragraph(
+        f"""
+        Farmer: {farmer.name}<br/>
+        Total Earnings: UGX {total_earnings:,.0f}<br/>
+        Total Items Sold: {total_items}
+        """,
+        styles["Normal"]
+    )
+
+
+    elements.append(summary)
+
+    elements.append(
+        Spacer(1,20)
+    )
 
 
     table = Table(
-        table_data,
-        repeatRows=1,
-        colWidths=[
-            100,   # customer
-            55,    # order number
-            75,    # date
-            100,   # product
-            60,    # quantity
-            90     # amount
-        ]
+        data,
+        repeatRows=1
     )
 
 
-    table.setStyle(TableStyle([
+    table.setStyle(
+        TableStyle([
 
-        (
-            "BACKGROUND",
-            (0,0),
-            (-1,0),
-            colors.darkgreen
-        ),
+            (
+                "BACKGROUND",
+                (0,0),
+                (-1,0),
+                colors.darkgreen
+            ),
 
-        (
-            "TEXTCOLOR",
-            (0,0),
-            (-1,0),
-            colors.white
-        ),
+            (
+                "TEXTCOLOR",
+                (0,0),
+                (-1,0),
+                colors.white
+            ),
 
-        (
-            "FONT",
-            (0,0),
-            (-1,0),
-            "Helvetica-Bold"
-        ),
+            (
+                "GRID",
+                (0,0),
+                (-1,-1),
+                0.5,
+                colors.black
+            ),
 
-        (
-            "GRID",
-            (0,0),
-            (-1,-1),
-            0.5,
-            colors.black
-        ),
+            (
+                "ALIGN",
+                (1,1),
+                (-1,-1),
+                "CENTER"
+            ),
 
-        (
-            "ALIGN",
-            (1,1),
-            (-1,-1),
-            "CENTER"
-        ),
+            (
+                "FONT",
+                (0,0),
+                (-1,0),
+                "Helvetica-Bold"
+            ),
 
-        (
-            "VALIGN",
-            (0,0),
-            (-1,-1),
-            "MIDDLE"
-        ),
-
-        (
-            "ROWBACKGROUNDS",
-            (0,1),
-            (-1,-1),
-            [colors.white, colors.lightgrey]
-        ),
-
-    ]))
+        ])
+    )
 
 
-    content.append(table)
+    elements.append(table)
 
-    doc.build(content)
+
+    pdf.build(elements)
+
 
     return response
