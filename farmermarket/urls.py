@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from farmersmarket import views
 from farmersmarket.views import (
      home, login_view, register_view, logout_view, dashboard_view,
-     farmer_report_view, farmer_report_pdf, # <-- Fully restored!
+     farmer_report_view, farmer_report_view, # <-- Fully restored!
     # marketplace
     marketplace_view, product_detail_view,
     # ratings
