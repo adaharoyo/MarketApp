@@ -907,3 +907,59 @@ def confirm_received(request, order_id):
         "order_detail",
         order_id=order.id
     )
+
+def farmer_report_view(request):
+    # Make sure the farmer is logged in
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    # Get farmer profile linked to the logged-in user
+    farmer = get_object_or_404(Farmer, user=request.user)
+
+    # Get farmer's products
+    products = Product.objects.filter(farmer=farmer)
+
+    # Calculate totals
+    total_products = products.count()
+    total_stock = products.aggregate(total=Sum('quantity'))['total'] or 0
+
+    # Create PDF
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer)
+
+    pdf.setTitle("Farmer Report")
+
+    pdf.drawString(100, 800, "Farmer Market Report")
+    pdf.drawString(100, 770, f"Farmer: {farmer}")
+    pdf.drawString(100, 740, f"Total Products: {total_products}")
+    pdf.drawString(100, 710, f"Total Stock: {total_stock}")
+
+    y = 670
+    pdf.drawString(100, y, "Products:")
+    y -= 30
+
+    for product in products:
+        pdf.drawString(
+            100,
+            y,
+            f"{product.name} - Price: {product.price}"
+        )
+        y -= 20
+
+        if y < 50:
+            pdf.showPage()
+            y = 800
+
+    pdf.save()
+
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer,
+        content_type="application/pdf"
+    )
+    response["Content-Disposition"] = (
+        'attachment; filename="farmer_report.pdf"'
+    )
+
+    return response

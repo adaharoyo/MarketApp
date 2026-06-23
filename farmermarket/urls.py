@@ -62,6 +62,13 @@ urlpatterns = [
     path('cart/remove/<int:product_id>/', remove_from_cart, name='remove_from_cart'),
     path('cart/update/<int:product_id>/', update_cart, name='update_cart'),
 
+
+    path(
+    "farmer/report/",
+    farmer_report_view,
+    name="farmer_report"
+),
+
     # Checkout & orders
     path('checkout/', checkout_view, name='checkout'),
     path('orders/<int:order_id>/', order_detail_view, name='order_detail'),
