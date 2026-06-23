@@ -54,7 +54,7 @@ urlpatterns = [
 
     # Farmer Reports
     path('farmer/report/', farmer_report_view, name='farmer_report'),
-    path('farmer/report/pdf/', farmer_report_pdf, name='farmer_report_pdf'),
+   
 
     # Cart
     path('cart/', cart_view, name='cart'),
