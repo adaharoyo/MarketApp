@@ -161,13 +161,7 @@ class Order(models.Model):
     notes = models.TextField(blank=True, null=True)
     courier = models.ForeignKey(Courier, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     delivered_at = models.DateTimeField(null=True, blank=True)
-    confirmation_code = models.CharField(
-        max_length=6,
-        blank=True,
-        null=True
-    )
     
-
     def __str__(self):
         return f"Order #{self.id} – {self.client.name}"
 

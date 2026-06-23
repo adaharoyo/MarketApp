@@ -512,9 +512,10 @@ VALID_TRANSITIONS = {
 
 @require_POST
 def update_order_status(request, order_id):
+
     if not request.user.is_authenticated:
         return redirect('login')
-        
+
     order = get_object_or_404(Order, pk=order_id)
     farmer = get_object_or_404(Farmer, user=request.user)
 
@@ -539,12 +540,8 @@ def update_order_status(request, order_id):
         if new_status == 'Delivered':
             order.delivered_at = timezone.now()
 
-        if new_status == 'Ready':
-            order.confirmation_code = str(random.randint(100000, 999999))
-
         order.save()
 
-        # Build notification strings based on status updates
         if new_status == 'Ready':
             status_message = (
                 f'Seller is delivering your order #{order.id}. '
@@ -556,7 +553,9 @@ def update_order_status(request, order_id):
                 f'Enjoy your produce!'
             )
         else:
-            status_message = f'Your order #{order.id} is now: {new_status}.'
+            status_message = (
+                f'Your order #{order.id} is now: {new_status}.'
+            )
 
         _queue_notification(
             recipient_type='Client',
@@ -568,14 +567,13 @@ def update_order_status(request, order_id):
 
         messages.success(request, f'Order #{order.id} → {new_status}.')
     else:
-        # This else block now maps perfectly back to: if new_status in allowed
         messages.error(
             request,
             f'Cannot change from {order.status} to {new_status}.'
         )
 
     return redirect('dashboard')
-            
+   
 
 
 # ─── FARMER EARNINGS ─────────────────────────────────────────────────────────
