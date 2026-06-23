@@ -538,12 +538,19 @@ def update_order_status(request, order_id):
         order.save()
 
         if new_status == 'Ready':
-            status_message = f'Seller is delivering your order #{order.id}. It is now ready for dispatch.'
+
+            order.confirmation_code = str(random.randint(100000, 999999))
+            order.save()
+
+        status_message = (
+        f'Seller is delivering your order #{order.id}. '
+        f'It is now ready for dispatch.' )
+
         elif new_status == 'Delivered':
             status_message = f'Your order #{order.id} has been delivered. Enjoy your produce!'
+
         else:
             status_message = f'Your order #{order.id} is now: {new_status}.'
-
         _queue_notification(
             recipient_type='Client',
             client=order.client,
@@ -552,10 +559,10 @@ def update_order_status(request, order_id):
             related_order=order,
         )
         messages.success(request, f'Order #{order.id} → {new_status}.')
-    else:
-        messages.error(request, f'Cannot change from {order.status} to {new_status}.')
+        else:
+            messages.error(request, f'Cannot change from {order.status} to {new_status}.')
 
-    return redirect('dashboard')
+        return redirect('dashboard')
 
 
 # ─── FARMER EARNINGS ─────────────────────────────────────────────────────────
