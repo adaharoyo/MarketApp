@@ -294,3 +294,16 @@ def order_status_poll(request, order_id):
         return JsonResponse({
             "error": "Order not found"
         }, status=404)
+    
+
+
+
+
+
+
+
+def farmer_report_view(request):
+    return HttpResponse("Farmer report page")
+
+def farmer_report_pdf(request):
+    return HttpResponse("Farmer report PDF")
