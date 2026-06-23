@@ -866,7 +866,7 @@ def check_notifications(request):
 
 def farmer_new_orders_check(request):
     if not request.user.is_authenticated:
-        return JsonResponse({"count": 0})
+        return JsonResponse({"new_order": False})
 
     try:
         farmer = Farmer.objects.get(user=request.user)
@@ -877,12 +877,12 @@ def farmer_new_orders_check(request):
         ).distinct().count()
 
         return JsonResponse({
-            "count": count
+            "new_order": count > 0
         })
 
     except Farmer.DoesNotExist:
         return JsonResponse({
-            "count": 0
+            "new_order": False
         })
     
 @require_POST
